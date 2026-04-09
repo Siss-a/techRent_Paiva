@@ -44,7 +44,7 @@ const registro = async (req, res) => {
     const usuarioId = await create('usuarios', {
       nome: nome.trim(),
       email: emailFormatado,
-      senha_hash,
+      senha,
       nivel_acesso
     });
 

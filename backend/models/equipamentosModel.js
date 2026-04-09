@@ -19,7 +19,7 @@ class equipamentosModel {
     }
 
     // GET /equipamentos/:id - retorna um equipamento pelo ID
-    static async buscarPorId() {
+    static async buscarPorId(id) {
         try {
             const rows = await read('equipamentos', `id = ${id}`);
             return rows[0] || null;

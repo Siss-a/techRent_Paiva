@@ -6,9 +6,7 @@
 
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-
-const bcrypt = require('bcryptjs');
-const mysql = require('mysql2/promise');
+import mysql from'mysql2/promise';
 
 // Cria um "pool" de conexões.
 // Um pool reutiliza conexões abertas ao invés de abrir uma nova a cada query,
@@ -114,7 +112,7 @@ async function hashPassword(password) {
     }
 }
 
-export { 
+export default { 
     create, 
     read, 
     update, 

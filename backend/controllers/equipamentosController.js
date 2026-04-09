@@ -5,7 +5,6 @@
 // Cada função recebe (req, res) e deve retornar uma resposta JSON.
 
 import equipamentosModel from '../models/equipamentosModel';
-import db from '../config/database.js';
 
 // GET /equipamentos - lista todos os equipamentos do inventário
 const listar = async (req, res) => {
@@ -52,7 +51,7 @@ const criar = async (req, res) => {
 
     //VALIDAÇÕES
 
-    const statusValidos = ['operacional', 'manutencao', 'inativo'];
+    const statusValidos = ['operacional', 'em_manutencao', 'desativado'];
 
     if (status && !statusValidos.includes(status)) {
       return res.status(400).json({

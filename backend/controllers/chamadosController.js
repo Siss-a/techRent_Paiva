@@ -15,7 +15,7 @@ import db from '../config/database.js';
 //   cliente       -> apenas os seus (WHERE cliente_id = req.usuario.id)
 const listar = async (req, res) => {
   try {
-    const { usuario } = req.usuario;
+    const usuario  = req.usuario;
     const chamados = await chamadosModel.listar(usuario);
 
     res.status(200).json({
@@ -131,7 +131,7 @@ const atualizarStatus = async (req, res) => {
 
 
     // Verifica se o chamado existe
-    const chamado = await ChamadosModel.buscarPorId(id);
+    const chamado = await chamadosModel.buscarPorId(id);
     if (!chamado) {
       return res.status(404).json({
         sucesso: false,
@@ -142,7 +142,7 @@ const atualizarStatus = async (req, res) => {
     const dadosAtualizar = { status };
     if (tecnico_id) dadosAtualizar.tecnico_id = tecnico_id;
 
-    await ChamadosModel.atualizarStatus(id, dadosAtualizar);
+    await chamadosModel.atualizarStatus(id, dadosAtualizar);
 
     // Se resolvido, marca o equipamento como 'operacional' novamente
     if (status === 'resolvido' && chamado.equipamento_id) {

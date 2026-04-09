@@ -8,7 +8,7 @@ class chamadosModel {
     //   cliente       -> apenas os seus (WHERE cliente_id = req.usuario.id)
     static async listar(usuario) {
         try {
-            if (usuario.tipo === 'cliente') {
+            if (usuario.nivel_acesso === 'cliente') {
                 return await read('chamados', `cliente_id = ${usuario.id}`);
             }
 
@@ -46,7 +46,7 @@ class chamadosModel {
         }
     }
 
-    static async atualizarSattus(id,dados){
+    static async atualizarStatus(id,dados){
         try{
             return await update('chamados', dados, `id = ${id}`);
         }catch(error){
