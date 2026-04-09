@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "start": "node page.js",
+    "dev": "npm run dev --prefix frontend"
+  },
   "dependencies": {
     "express": "^5.2.1",
     "node": "^25.8.2"
