@@ -34,15 +34,15 @@ class equipamentosModel {
     static async criar(dadosEquipamentos) {
         try {
 
-            // const dados = {
-            //     nome: dadosEquipamentos.nome,
-            //     categoria: dadosEquipamentos.categoria,
-            //     patrimonio: dadosEquipamentos.patrimonio,
-            //     status: dadosEquipamentos.status,
-            //     descricao: dadosEquipamentos.descricao
-            // }
+            const dadosTratados = {
+                nome: dadosEquipamentos.nome,
+                categoria: dadosEquipamentos.categoria,
+                patrimonio: dadosEquipamentos.patrimonio,
+                status: dadosEquipamentos.status,
+                descricao: dadosEquipamentos.descricao
+            }
 
-            return await create('equipamentos', dadosEquipamentos)
+            return await create('equipamentos', dadosTratados)
 
         } catch (error) {
             console.error('Erro ao criar um equipamento');

@@ -67,7 +67,7 @@ const criar = async (req, res) => {
       categoria: categoria,
       patrimonio: patrimonio,
       status: status || 'operacional',
-      descricao: descricao,
+      descricao: descricao || null,
     }
 
     const equipamentoCriado = await equipamentosModel.criar(dadosEquipamentos);

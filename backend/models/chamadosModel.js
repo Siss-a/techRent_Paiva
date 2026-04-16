@@ -43,6 +43,7 @@ class chamadosModel {
 
         }catch(error){
             console.error('Erro ao criar chamado')
+             throw error;
         }
     }
 

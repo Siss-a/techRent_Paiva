@@ -1,23 +1,12 @@
 "use client";
 
-// =============================================
-// PÁGINA DE INVENTÁRIO — /inventario
-// =============================================
-// Responsabilidades:
-//   1. Buscar lista de equipamentos via GET /equipamentos
-//   2. Exibir em tabela: Nome, Categoria, Patrimônio, Status
-//   3. Filtro client-side por status
-//   4. Botão "Abrir chamado" por equipamento operacional
-//   5. Redirecionar para /login se não houver token
-// =============================================
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 // Componentes shadcn/ui
 import { Button } from "@/components/ui/button";
-import { Badge }  from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -33,17 +22,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pencil, PlusCircle, Search } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-// ── Helpers de status ─────────────────────────────────
-// Mapeia o valor do ENUM do banco para um rótulo legível e cor do Badge
 const STATUS_MAP = {
-  operacional:    { label: "Operacional",     variant: "default"     },
-  em_manutencao:  { label: "Em manutenção",   variant: "secondary"   },
-  desativado:     { label: "Desativado",       variant: "outline"     },
+  operacional: { label: "Operacional", variant: "default" },
+  em_manutencao: { label: "Em manutenção", variant: "secondary" },
+  desativado: { label: "Desativado", variant: "outline" },
 };
 
 function BadgeStatus({ status }) {
@@ -55,175 +52,276 @@ export default function InventarioPage() {
   const router = useRouter();
 
   // ── Estados ───────────────────────────────────────────
-  const [equipamentos, setEquipamentos] = useState([]);  // dados brutos da API
-  const [filtroStatus, setFiltroStatus] = useState("todos"); // filtro ativo
-  const [carregando, setCarregando]     = useState(true);
-  const [erro, setErro]                 = useState("");
+  const [equipamentos, setEquipamentos] = useState([]);
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [buscaId, setBuscaId] = useState(""); // Estado para busca por ID
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [nivelAcesso, setNivelAcesso] = useState("");
 
-  // ── Busca inicial dos equipamentos ────────────────────
+  // Estados para Modal de Adicionar/Editar
+  const [modalAberto, setModalAberto] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
+  const [formData, setFormData] = useState({
+    nome: "",
+    categoria: "",
+    patrimonio: "",
+    status: "operacional",
+  });
+
+  // ── Busca inicial ──────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const userRaw = localStorage.getItem("usuario");
 
-    // Sem token, volta para o login
     if (!token) {
       router.push("/login");
       return;
     }
 
-    async function buscarEquipamentos() {
-      setCarregando(true);
-      setErro("");
-
-      try {
-        const resposta = await fetch(`${API_URL}/equipamentos`, {
-          headers: {
-            // O backend espera "Bearer <token>"
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        // Token expirado ou inválido
-        if (resposta.status === 401) {
-          localStorage.removeItem("token");
-          router.push("/login");
-          return;
-        }
-
-        const dados = await resposta.json();
-
-        if (!resposta.ok || !dados.sucesso) {
-          setErro(dados.erro || "Erro ao carregar equipamentos.");
-          return;
-        }
-
-        setEquipamentos(dados.dados);
-      } catch (err) {
-        setErro("Sem conexão com o servidor.");
-        console.error("Erro ao buscar equipamentos:", err);
-      } finally {
-        setCarregando(false);
-      }
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      setNivelAcesso(user.nivel_acesso);
     }
 
     buscarEquipamentos();
-  }, [router]); // roda uma única vez na montagem
+  }, [router]);
 
-  // ── Filtro client-side ────────────────────────────────
-  // Nenhuma nova requisição — só filtra o array já carregado
-  const equipamentosFiltrados =
-    filtroStatus === "todos"
-      ? equipamentos
-      : equipamentos.filter((e) => e.status === filtroStatus);
+  async function buscarEquipamentos() {
+    setCarregando(true);
+    const token = localStorage.getItem("token");
+    try {
+      const resposta = await fetch(`${API_URL}/equipamentos`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dados = await resposta.json();
+      if (dados.sucesso) setEquipamentos(dados.dados);
+    } catch (err) {
+      setErro("Erro ao buscar equipamentos.");
+    } finally {
+      setCarregando(false);
+    }
+  }
 
-  // ── Render ────────────────────────────────────────────
+  // ── Ações de Admin ─────────────────────────────────────
+  const abrirModalNovo = () => {
+    setEditandoId(null);
+    setFormData({ nome: "", categoria: "", patrimonio: "", status: "operacional" });
+    setModalAberto(true);
+  };
+
+  const abrirModalEditar = (eq) => {
+    setEditandoId(eq.id);
+    setFormData({
+      nome: eq.nome,
+      categoria: eq.categoria || "",
+      patrimonio: eq.patrimonio || "",
+      status: eq.status,
+    });
+    setModalAberto(true);
+  };
+
+  const salvarEquipamento = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    const metodo = editandoId ? "PUT" : "POST";
+    const url = editandoId ? `${API_URL}/equipamentos/${editandoId}` : `${API_URL}/equipamentos`;
+
+    // Garantir que campos vazios sejam enviados como null para o backend não crashar
+    const payload = {
+      ...formData,
+      categoria: formData.categoria || null,
+      patrimonio: formData.patrimonio || null,
+    };
+
+    try {
+      const res = await fetch(url, {
+        method: metodo,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setModalAberto(false);
+        buscarEquipamentos();
+      } else {
+        alert("Erro ao salvar equipamento.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ── Filtro Combinado (Status + Pesquisa por ID) ────────
+  const equipamentosFiltrados = equipamentos.filter((e) => {
+    const matchesStatus = filtroStatus === "todos" || e.status === filtroStatus;
+    const matchesId = e.id.toString().includes(buscaId);
+    return matchesStatus && matchesId;
+  });
+
   return (
     <main className="min-h-screen bg-slate-50">
-
-      {/* Barra superior */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Inventário de Equipamentos</h1>
+      <header className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm">
+        <h1 className="text-xl font-bold text-slate-800">techRent</h1>
         <div className="flex items-center gap-3">
-          <Link href="/chamados">
-            <Button variant="outline" size="sm">Meus chamados</Button>
-          </Link>
+          {nivelAcesso === "admin" && (
+            <Button onClick={abrirModalNovo} className="gap-2">
+              <PlusCircle size={18} /> Novo Equipamento
+            </Button>
+          )}
           <Link href="/dashboard">
-            <Button variant="outline" size="sm">Dashboard</Button>
+            <Button variant="outline">Dashboard</Button>
           </Link>
         </div>
       </header>
 
       <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-6">
-
-        {/* Filtro por status */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Filtrar por status:</span>
+        
+        {/* Barra de Busca e Filtros */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg border shadow-sm">
+          <div className="relative col-span-1 md:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <Input 
+              placeholder="Pesquisar por ID..." 
+              className="pl-10"
+              value={buscaId}
+              onChange={(e) => setBuscaId(e.target.value)}
+            />
+          </div>
           <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
+            <SelectTrigger>
+              <SelectValue placeholder="Filtrar por Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="todos">Todos os Status</SelectItem>
               <SelectItem value="operacional">Operacional</SelectItem>
               <SelectItem value="em_manutencao">Em manutenção</SelectItem>
               <SelectItem value="desativado">Desativado</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Contador de resultados */}
-          <span className="text-sm text-muted-foreground ml-auto">
-            {equipamentosFiltrados.length} equipamento(s)
-          </span>
         </div>
 
-        {/* Erro de rede */}
         {erro && (
           <Alert variant="destructive">
             <AlertDescription>{erro}</AlertDescription>
           </Alert>
         )}
 
-        {/* Tabela */}
-        <div className="rounded-md border bg-white overflow-hidden">
+        <div className="rounded-md border bg-white overflow-hidden shadow-sm">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-slate-50">
               <TableRow>
+                <TableHead className="w-[80px]">ID</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Patrimônio</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody>
-              {/* Estado: carregando — mostra linhas de esqueleto */}
-              {carregando &&
+              {carregando ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                     ))}
                   </TableRow>
-                ))}
-
-              {/* Estado: sem dados após carregar */}
-              {!carregando && equipamentosFiltrados.length === 0 && (
+                ))
+              ) : equipamentosFiltrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                     Nenhum equipamento encontrado.
                   </TableCell>
                 </TableRow>
-              )}
-
-              {/* Estado: dados carregados */}
-              {!carregando &&
+              ) : (
                 equipamentosFiltrados.map((eq) => (
                   <TableRow key={eq.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">#{eq.id}</TableCell>
                     <TableCell className="font-medium">{eq.nome}</TableCell>
-                    <TableCell>{eq.categoria ?? "—"}</TableCell>
-                    <TableCell className="font-mono text-sm">{eq.patrimonio ?? "—"}</TableCell>
-                    <TableCell>
-                      <BadgeStatus status={eq.status} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {/* Só permite abrir chamado em equipamentos operacionais */}
-                      {eq.status === "operacional" ? (
+                    <TableCell>{eq.categoria || "—"}</TableCell>
+                    <TableCell className="font-mono text-sm">{eq.patrimonio || "—"}</TableCell>
+                    <TableCell><BadgeStatus status={eq.status} /></TableCell>
+                    <TableCell className="text-right flex justify-end gap-2">
+                      {nivelAcesso === "admin" && (
+                        <Button variant="ghost" size="icon" onClick={() => abrirModalEditar(eq)}>
+                          <Pencil size={16} />
+                        </Button>
+                      )}
+                      {eq.status === "operacional" && (
                         <Link href={`/chamados/novo?equipamento_id=${eq.id}&nome=${encodeURIComponent(eq.nome)}`}>
-                          <Button size="sm">Abrir chamado</Button>
+                          <Button size="sm">Chamado</Button>
                         </Link>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Indisponível</span>
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
-
       </div>
+
+      {/* MODAL ADICIONAR/EDITAR */}
+      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editandoId ? `Editar #${editandoId}` : "Novo Equipamento"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={salvarEquipamento} className="space-y-4 pt-4">
+            <div className="grid gap-2">
+              <Label htmlFor="nome">Nome do Equipamento</Label>
+              <Input 
+                id="nome" 
+                value={formData.nome} 
+                onChange={(e) => setFormData({...formData, nome: e.target.value})} 
+                required 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="categoria">Categoria</Label>
+                <Input 
+                  id="categoria" 
+                  value={formData.categoria} 
+                  onChange={(e) => setFormData({...formData, categoria: e.target.value})} 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="patrimonio">Patrimônio</Label>
+                <Input 
+                  id="patrimonio" 
+                  value={formData.patrimonio} 
+                  onChange={(e) => setFormData({...formData, patrimonio: e.target.value})} 
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select 
+                value={formData.status} 
+                onValueChange={(v) => setFormData({...formData, status: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="operacional">Operacional</SelectItem>
+                  <SelectItem value="em_manutencao">Em manutenção</SelectItem>
+                  <SelectItem value="desativado">Desativado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>Cancelar</Button>
+              <Button type="submit">Salvar Equipamento</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

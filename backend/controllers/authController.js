@@ -1,36 +1,26 @@
-// =============================================
-// CONTROLLER DE AUTENTICAÇÃO
-// =============================================
-// TODO (alunos): implementar as funções registro e login.
-//
-// Dicas:
-//   - Use bcryptjs para criptografar a senha antes de salvar (registro)
-//   - Use bcryptjs para comparar a senha no login (bcrypt.compare)
-//   - Use jsonwebtoken (jwt.sign) para gerar o token após login bem-sucedido
-//   - O payload do token deve ter: id, nome, email, nivel_acesso
-//   - NUNCA coloque a senha no payload do token!
-
-
 import jwt from 'jsonwebtoken';
-import { 
-  create, 
-  read, 
-  hashPassword, 
-  comparePassword 
-} 
-from '../config/database.js';
+import {
+  create,
+  read,
+  hashPassword,
+  comparePassword
+} from '../config/database.js';
 
 // POST /auth/registro - cria um novo usuário
 const registro = async (req, res) => {
   try {
     const { nome, email, senha, nivel_acesso } = req.body;
 
+    if (!nome || !email || !senha) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Campos obrigatórios: nome, email, senha'
+      });
+    }
+
     const emailFormatado = email.trim().toLowerCase();
 
-
-    // Verificar se já existe
     const usuarios = await read('usuarios', `email = '${emailFormatado}'`);
-
     if (usuarios.length > 0) {
       return res.status(409).json({
         sucesso: false,
@@ -38,15 +28,14 @@ const registro = async (req, res) => {
       });
     }
 
-    // Gerar hash
-    const senha_hash = await hashPassword(senha);
+    const senhaHash = await hashPassword(senha);
 
-    // Criar usuário
+    // A coluna no banco é 'senha_hash'
     const usuarioId = await create('usuarios', {
       nome: nome.trim(),
       email: emailFormatado,
-      senha_hash,
-      nivel_acesso
+      senha_hash: senhaHash,
+      nivel_acesso: nivel_acesso || 'cliente'
     });
 
     res.status(201).json({
@@ -62,8 +51,7 @@ const registro = async (req, res) => {
     console.error('Erro ao registrar usuário:', error);
     res.status(500).json({
       sucesso: false,
-      erro: 'Erro interno do servidor',
-      mensagem: 'Não foi possível registrar o usuário'
+      erro: 'Erro interno do servidor'
     });
   }
 };
@@ -73,11 +61,16 @@ const login = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
+    if (!email || !senha) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Campos obrigatórios: email, senha'
+      });
+    }
+
     const emailFormatado = email.trim().toLowerCase();
 
-    // Buscar usuário
     const usuarios = await read('usuarios', `email = '${emailFormatado}'`);
-
     if (usuarios.length === 0) {
       return res.status(401).json({
         sucesso: false,
@@ -87,9 +80,8 @@ const login = async (req, res) => {
 
     const usuario = usuarios[0];
 
-    // Validar senha
+    // Usa o campo 'senha_hash' que é o nome da coluna no banco
     const senhaValida = await comparePassword(senha, usuario.senha_hash);
-
     if (!senhaValida) {
       return res.status(401).json({
         sucesso: false,
@@ -97,7 +89,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Gerar token 
     const token = jwt.sign(
       {
         id: usuario.id,
@@ -122,7 +113,6 @@ const login = async (req, res) => {
         }
       }
     });
-
   } catch (error) {
     console.error('Erro no login:', error);
     res.status(500).json({
@@ -130,5 +120,6 @@ const login = async (req, res) => {
       erro: 'Erro interno do servidor'
     });
   }
-}
-export default{ registro, login };
+};
+
+export default { registro, login };

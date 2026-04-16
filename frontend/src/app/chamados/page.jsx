@@ -1,26 +1,15 @@
 "use client";
 
-// =============================================
-// PÁGINA DE CHAMADOS — /chamados
-// =============================================
-// Responsabilidades:
-//   1. Listar chamados do usuário via GET /chamados
-//   2. Formulário inline para criar novo chamado
-//   3. POST /chamados ao submeter o formulário
-//   4. Atualizar a lista localmente após criação (sem reload)
-//   5. Badge de prioridade e status em cada linha
-// =============================================
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 // Componentes shadcn/ui
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge }    from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -43,27 +32,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Pencil, Trash2, Search, FilterX } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-// ── Helpers de badge ──────────────────────────────────
+// ── Helpers ───────────────────────────────────────────
 const STATUS_BADGE = {
-  aberto:         "default",
+  aberto: "default",
   em_atendimento: "secondary",
-  resolvido:      "outline",
-  cancelado:      "destructive",
+  resolvido: "outline",
+  cancelado: "destructive",
 };
 
 const PRIORIDADE_BADGE = {
   baixa: "outline",
   media: "secondary",
-  alta:  "destructive",
+  alta: "destructive",
 };
 
-// Formata timestamp ISO em dd/mm/aaaa hh:mm
 function formatarData(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("pt-BR", {
@@ -75,309 +72,280 @@ function formatarData(iso) {
 export default function ChamadosPage() {
   const router = useRouter();
 
-  // ── Estados ───────────────────────────────────────────
-  const [chamados, setChamados]   = useState([]);
+  // ── Estados de Dados ──────────────────────────────────
+  const [chamados, setChamados] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro]           = useState("");
+  const [erro, setErro] = useState("");
 
-  // Controla visibilidade do formulário de criação
+  // ── Estados de Filtro/Pesquisa ────────────────────────
+  const [pesquisa, setPesquisa] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroPrioridade, setFiltroPrioridade] = useState("todos");
+
+  // ── Estados de Formulário (Criação/Edição) ────────────
   const [mostrarForm, setMostrarForm] = useState(false);
-
-  // Estado do formulário de novo chamado
+  const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState({
     equipamento_id: "",
-    titulo:         "",
-    descricao:      "",
-    prioridade:     "media",
+    titulo: "",
+    descricao: "",
+    prioridade: "media",
+    status: "aberto"
   });
-  const [enviando, setEnviando]   = useState(false);
-  const [erroForm, setErroForm]   = useState("");
-  const [sucessoForm, setSucessoForm] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
-  // ── Busca inicial dos chamados ────────────────────────
+  // ── Busca inicial ──────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-
-    async function buscarChamados() {
-      setCarregando(true);
-      setErro("");
-      try {
-        const resposta = await fetch(`${API_URL}/chamados`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (resposta.status === 401) {
-          localStorage.removeItem("token");
-          router.push("/login");
-          return;
-        }
-
-        const dados = await resposta.json();
-        if (!resposta.ok || !dados.sucesso) {
-          setErro(dados.erro || "Erro ao carregar chamados.");
-          return;
-        }
-        setChamados(dados.dados);
-      } catch (err) {
-        setErro("Sem conexão com o servidor.");
-        console.error(err);
-      } finally {
-        setCarregando(false);
-      }
-    }
-
     buscarChamados();
   }, [router]);
 
-  // ── Handler do formulário de criação ─────────────────
-  function handleFormChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  function handleSelectChange(campo) {
-    return (valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
-  }
-
-  async function handleCriarChamado(e) {
-    e.preventDefault();
-    setErroForm("");
-    setSucessoForm("");
-
-    // Validação mínima
-    if (!form.equipamento_id || !form.titulo.trim()) {
-      setErroForm("ID do equipamento e título são obrigatórios.");
-      return;
-    }
-
+  async function buscarChamados() {
+    setCarregando(true);
     const token = localStorage.getItem("token");
-    setEnviando(true);
-
     try {
       const resposta = await fetch(`${API_URL}/chamados`, {
-        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dados = await resposta.json();
+      if (dados.sucesso) setChamados(dados.dados);
+      else setErro(dados.erro);
+    } catch (err) {
+      setErro("Erro de conexão.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  // ── Handlers de CRUD ──────────────────────────────────
+  const abrirEdicao = (chamado) => {
+    setEditandoId(chamado.id);
+    setForm({
+      equipamento_id: chamado.equipamento_id,
+      titulo: chamado.titulo,
+      descricao: chamado.descricao || "",
+      prioridade: chamado.prioridade,
+      status: chamado.status
+    });
+    setMostrarForm(true);
+  };
+
+  async function handleSalvarChamado(e) {
+    e.preventDefault();
+    setEnviando(true);
+    const token = localStorage.getItem("token");
+    const metodo = editandoId ? "PUT" : "POST";
+    const url = editandoId ? `${API_URL}/chamados/${editandoId}` : `${API_URL}/chamados`;
+
+    try {
+      const resposta = await fetch(url, {
+        method: metodo,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          equipamento_id: Number(form.equipamento_id), // garante que é número
-          titulo:         form.titulo.trim(),
-          descricao:      form.descricao.trim(),
-          prioridade:     form.prioridade,
-        }),
+        body: JSON.stringify(form),
       });
 
-      const dados = await resposta.json();
-
-      if (!resposta.ok || !dados.sucesso) {
-        setErroForm(dados.erro || "Erro ao criar chamado.");
-        return;
-      }
-
-      // Adiciona o novo chamado ao topo da lista sem recarregar a página
-      setChamados((prev) => [dados.dados, ...prev]);
-      setSucessoForm("Chamado criado com sucesso!");
-
-      // Reseta o formulário
-      setForm({ equipamento_id: "", titulo: "", descricao: "", prioridade: "media" });
-
-      // Fecha o formulário após 1.5s
-      setTimeout(() => {
+      if (resposta.ok) {
         setMostrarForm(false);
-        setSucessoForm("");
-      }, 1500);
+        setEditandoId(null);
+        setForm({ equipamento_id: "", titulo: "", descricao: "", prioridade: "media", status: "aberto" });
+        buscarChamados();
+      }
     } catch (err) {
-      setErroForm("Erro de conexão ao criar chamado.");
       console.error(err);
     } finally {
       setEnviando(false);
     }
   }
 
-  // ── Render ────────────────────────────────────────────
+  async function handleExcluir(id) {
+    if (!confirm("Tem certeza que deseja excluir este chamado?")) return;
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_URL}/chamados/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setChamados(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      alert("Erro ao excluir.");
+    }
+  }
+
+  // ── Lógica de Filtro ──────────────────────────────────
+  const chamadosFiltrados = chamados.filter((c) => {
+    const searchMatch = 
+      c.titulo.toLowerCase().includes(pesquisa.toLowerCase()) || 
+      c.id.toString() === pesquisa;
+    const statusMatch = filtroStatus === "todos" || c.status === filtroStatus;
+    const prioridadeMatch = filtroPrioridade === "todos" || c.prioridade === filtroPrioridade;
+    
+    return searchMatch && statusMatch && prioridadeMatch;
+  });
+
   return (
     <main className="min-h-screen bg-slate-50">
-
-      {/* Barra superior */}
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Meus Chamados</h1>
-        <div className="flex items-center gap-3">
+        <h1 className="text-xl font-semibold">Gestão de Chamados</h1>
+        <div className="flex gap-2">
+          
+          <Button size="sm" onClick={() => { setEditandoId(null); setMostrarForm(true); }}>
+            + Novo chamado
+          </Button>
           <Link href="/inventario">
             <Button variant="outline" size="sm">Inventário</Button>
           </Link>
-          <Button
-            size="sm"
-            onClick={() => { setMostrarForm((v) => !v); setErroForm(""); setSucessoForm(""); }}
-          >
-            {mostrarForm ? "Cancelar" : "+ Novo chamado"}
-          </Button>
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm">Dashboard</Button>
+          </Link>
         </div>
       </header>
+      
 
-      <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-6">
+      <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-6">
+        
+        {/* ── Barra de Busca e Filtros ── */}
+        <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-lg border shadow-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input 
+              placeholder="Pesquisar por ID ou Título..." 
+              className="pl-9" 
+              value={pesquisa}
+              onChange={(e) => setPesquisa(e.target.value)}
+            />
+          </div>
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos Status</SelectItem>
+              <SelectItem value="aberto">Aberto</SelectItem>
+              <SelectItem value="em_atendimento">Em Atendimento</SelectItem>
+              <SelectItem value="resolvido">Resolvido</SelectItem>
+              <SelectItem value="cancelado">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filtroPrioridade} onValueChange={setFiltroPrioridade}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Prioridade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas Prioridades</SelectItem>
+              <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="alta">Alta</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="icon" onClick={() => {setPesquisa(""); setFiltroStatus("todos"); setFiltroPrioridade("todos")}}>
+            <FilterX size={20} />
+          </Button>
+        </div>
 
-        {/* ── Formulário de novo chamado (colapsável) ── */}
-        {mostrarForm && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Novo chamado</CardTitle>
-              <CardDescription>
-                Informe o ID do equipamento com problema e descreva o que está acontecendo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCriarChamado} className="flex flex-col gap-4">
-
-                {erroForm && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{erroForm}</AlertDescription>
-                  </Alert>
-                )}
-                {sucessoForm && (
-                  <Alert className="border-green-500 text-green-700 bg-green-50">
-                    <AlertDescription>{sucessoForm}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* ID do equipamento — em produção substituir por Select populado */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="equipamento_id">ID do equipamento</Label>
-                  <Input
-                    id="equipamento_id"
-                    name="equipamento_id"
-                    type="number"
-                    min="1"
-                    placeholder="Ex: 3"
-                    required
-                    value={form.equipamento_id}
-                    onChange={handleFormChange}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Você pode ver os IDs na página de{" "}
-                    <Link href="/inventario" className="underline">Inventário</Link>.
-                  </p>
-                </div>
-
-                {/* Título */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="titulo">Título</Label>
-                  <Input
-                    id="titulo"
-                    name="titulo"
-                    type="text"
-                    placeholder="Ex: Monitor não liga"
-                    required
-                    value={form.titulo}
-                    onChange={handleFormChange}
-                  />
-                </div>
-
-                {/* Prioridade */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="prioridade">Prioridade</Label>
-                  <Select value={form.prioridade} onValueChange={handleSelectChange("prioridade")}>
-                    <SelectTrigger id="prioridade" className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Descrição */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="descricao">Descrição (opcional)</Label>
-                  <Textarea
-                    id="descricao"
-                    name="descricao"
-                    placeholder="Detalhe o problema encontrado…"
-                    rows={3}
-                    value={form.descricao}
-                    onChange={handleFormChange}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full sm:w-auto self-end" disabled={enviando}>
-                  {enviando ? "Enviando…" : "Criar chamado"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        <Separator />
-
-        {/* Erro de rede na listagem */}
-        {erro && (
-          <Alert variant="destructive">
-            <AlertDescription>{erro}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* ── Tabela de chamados ── */}
-        <div className="rounded-md border bg-white overflow-hidden">
+        {/* ── Tabela de Dados ── */}
+        <div className="rounded-md border bg-white overflow-hidden shadow-sm">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-12">#</TableHead>
+                <TableHead className="w-16">ID</TableHead>
                 <TableHead>Título</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Aberto em</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody>
-              {/* Skeleton durante carregamento */}
-              {carregando &&
-                Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-
-              {/* Sem chamados */}
-              {!carregando && chamados.length === 0 && (
+              {carregando ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                ))
+              ) : chamadosFiltrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                    Nenhum chamado encontrado. Crie o primeiro clicando em "+ Novo chamado".
-                  </TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Nenhum chamado encontrado.</TableCell>
                 </TableRow>
-              )}
-
-              {/* Dados */}
-              {!carregando &&
-                chamados.map((c) => (
+              ) : (
+                chamadosFiltrados.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="text-muted-foreground text-sm">{c.id}</TableCell>
+                    <TableCell className="font-mono text-xs">#{c.id}</TableCell>
                     <TableCell className="font-medium">{c.titulo}</TableCell>
                     <TableCell>
-                      <Badge variant={PRIORIDADE_BADGE[c.prioridade] ?? "outline"}>
-                        {c.prioridade}
-                      </Badge>
+                      <Badge variant={PRIORIDADE_BADGE[c.prioridade]}>{c.prioridade}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>
-                        {c.status?.replace("_", " ")}
-                      </Badge>
+                      <Badge variant={STATUS_BADGE[c.status]}>{c.status.replace("_", " ")}</Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatarData(c.aberto_em)}
+                    <TableCell className="text-sm text-muted-foreground">{formatarData(c.aberto_em)}</TableCell>
+                    <TableCell className="text-right flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => abrirEdicao(c)}><Pencil size={16} /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleExcluir(c.id)}><Trash2 size={16} /></Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
-
       </div>
+
+      {/* ── Modal de Formulário (Cria/Edita) ── */}
+      <Dialog open={mostrarForm} onOpenChange={setMostrarForm}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editandoId ? "Editar Chamado" : "Novo Chamado"}</DialogTitle>
+            <DialogDescription>Preencha os dados do chamado abaixo.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSalvarChamado} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>ID Equipamento</Label>
+                <Input type="number" required value={form.equipamento_id} onChange={e => setForm({...form, equipamento_id: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Prioridade</Label>
+                <Select value={form.prioridade} onValueChange={v => setForm({...form, prioridade: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {editandoId && (
+               <div className="space-y-2">
+               <Label>Status</Label>
+               <Select value={form.status} onValueChange={v => setForm({...form, status: v})}>
+                 <SelectTrigger><SelectValue /></SelectTrigger>
+                 <SelectContent>
+                    <SelectItem value="aberto">Aberto</SelectItem>
+                    <SelectItem value="em_atendimento">Em Atendimento</SelectItem>
+                    <SelectItem value="resolvido">Resolvido</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
+            )}
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input required value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea rows={3} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setMostrarForm(false)}>Cancelar</Button>
+              <Button type="submit" disabled={enviando}>{enviando ? "Salvando..." : "Salvar"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

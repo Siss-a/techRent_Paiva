@@ -68,6 +68,14 @@ const criar = async (req, res) => {
     const { titulo, descricao, equipamento_id, prioridade } = req.body;
     const cliente_id = req.usuario.id;
 
+     // Validação de campos obrigatórios
+    if (!titulo || !equipamento_id) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Campos obrigatórios: titulo, equipamento_id'
+      });
+    }
+
     const prioridadesValidas = ['baixa', 'media', 'alta'];
 
     if (prioridade && !prioridadesValidas.includes(prioridade)) {
@@ -84,7 +92,6 @@ const criar = async (req, res) => {
       prioridade: prioridade || 'media',
       status: 'aberto',
       cliente_id
-      //tecnico_id atribuido dps???
     };
 
     const novoId = await chamadosModel.criar(dadosChamado);
@@ -102,13 +109,27 @@ const criar = async (req, res) => {
         equipamento_id,
         prioridade: dadosChamado.prioridade,
         status: dadosChamado.status,
-        cliente_id
+        cliente_id,
+        aberto_em: new Date().toISOString()
       }
     });
 
   } catch (error) {
-    console.error('Erro ao criar um novo chamado: ', error);
-    throw error;
+    console.error('Erro ao criar um novo chamado: ', error.message);
+    
+    // Se o erro for de Chave Estrangeira (ID não encontrado)
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'O ID do equipamento informado não existe no sistema.'
+      });
+    }
+
+    // Para outros erros
+    res.status(500).json({
+      sucesso: false,
+      erro: 'Erro interno do servidor ao criar chamado.'
+    });
   }
 };
 
