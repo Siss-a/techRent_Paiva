@@ -2,10 +2,11 @@
 // ROTAS DE MANUTENÇÃO
 // =============================================
 
-const express = require('express');
+
+import express from 'express';
 const router = express.Router();
-const { autenticar, autorizar } = require('../middlewares/auth');
-const ctrl = require('../controllers/manutencaoController');
+import { autenticar, autorizar } from '../middlewares/auth.js';
+import ctrl from '../controllers/manutencaoController.js';
 
 // Listar histórico de manutenções (admin e técnico)
 router.get('/', autenticar, autorizar('admin', 'tecnico'), ctrl.listar);
@@ -13,4 +14,4 @@ router.get('/', autenticar, autorizar('admin', 'tecnico'), ctrl.listar);
 // Registrar um reparo (apenas técnico)
 router.post('/', autenticar, autorizar('tecnico'), ctrl.registrar);
 
-module.exports = router;
+export default router;

@@ -4,7 +4,7 @@
 // TODO (alunos): implementar cada função abaixo.
 // Cada função recebe (req, res) e deve retornar uma resposta JSON.
 
-import equipamentosModel from '../models/equipamentosModel';
+import equipamentosModel from '../models/equipamentosModel.js';
 
 // GET /equipamentos - lista todos os equipamentos do inventário
 const listar = async (req, res) => {
@@ -154,4 +154,4 @@ const remover = async (req, res) => {
   }
 };
 
-export { listar, buscarPorId, criar, atualizar, remover };
+export default{ listar, buscarPorId, criar, atualizar, remover };

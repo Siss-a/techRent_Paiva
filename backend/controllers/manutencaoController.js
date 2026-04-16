@@ -3,7 +3,7 @@
 // =============================================
 // TODO (alunos): implementar cada função abaixo.
 
-import manutencaoModel from '../models/manutencaoModel';
+import manutencaoModel from '../models/manutencaoModel.js';
 import { update } from '../config/database.js';
 
 // GET /manutencao - lista todos os registros de manutenção (admin/técnico)
@@ -75,4 +75,4 @@ const registrar = async (req, res) => {
   }
 };
 
-export { listar, registrar };
+export default{ listar, registrar };

@@ -2,10 +2,10 @@
 // ROTAS DE CHAMADOS
 // =============================================
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { autenticar, autorizar } = require('../middlewares/auth');
-const ctrl = require('../controllers/chamadosController');
+import { autenticar, autorizar } from '../middlewares/auth.js';
+import ctrl from '../controllers/chamadosController.js';
 
 // Listar chamados (cada perfil vê uma visão diferente — lógica no controller)
 router.get('/', autenticar, ctrl.listar);
@@ -19,4 +19,4 @@ router.post('/', autenticar, autorizar('cliente', 'admin'), ctrl.criar);
 // Atualizar o status do chamado (técnico, admin)
 router.put('/:id/status', autenticar, autorizar('tecnico', 'admin'), ctrl.atualizarStatus);
 
-module.exports = router;
+export default router;

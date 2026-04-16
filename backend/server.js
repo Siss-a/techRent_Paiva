@@ -9,16 +9,15 @@
 
 // dotenv deve ser o PRIMEIRO require, para que as variáveis
 // fiquem disponíveis em todos os outros módulos
-require('dotenv').config();
-
-const express = require('express');
+import 'dotenv/config';
+import express from 'express';
 
 // ---- Importação das rotas ----
-const authRoutes         = require('./routes/authRoutes');
-const equipamentosRoutes = require('./routes/equipamentosRoutes');
-const chamadosRoutes     = require('./routes/chamadosRoutes');
-const manutencaoRoutes   = require('./routes/manutencaoRoutes');
-const dashboardRoutes    = require('./routes/dashboardRoutes');
+import authRoutes from './routes/authRoutes.js';
+import equipamentosRoutes from './routes/equipamentosRoutes.js';
+import chamadosRoutes from './routes/chamadosRoutes.js';
+import manutencaoRoutes from './routes/manutencaoRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 const app = express();
 
@@ -28,7 +27,7 @@ const app = express();
 app.use(express.json());
 
 // TODO (opcional): adicionar cors se o frontend rodar em outra porta
-const cors = require('cors');
+import cors from 'cors';
 app.use(cors());
 
 // ---- Registro das rotas ----

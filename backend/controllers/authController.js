@@ -131,4 +131,4 @@ const login = async (req, res) => {
     });
   }
 }
-export { registro, login };
+export default{ registro, login };

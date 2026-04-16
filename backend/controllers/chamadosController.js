@@ -7,7 +7,7 @@
 //   aberto -> em_atendimento -> resolvido
 //                           -> cancelado
 
-import chamadosModel from '../models/chamadosModel';
+import chamadosModel from '../models/chamadosModel.js';
 import { update } from '../config/database.js';
 
 // GET /chamados - lista chamados
@@ -160,4 +160,4 @@ const atualizarStatus = async (req, res) => {
   }
 };
 
-export { listar, buscarPorId, criar, atualizarStatus }
+export default{ listar, buscarPorId, criar, atualizarStatus }

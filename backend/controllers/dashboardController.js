@@ -4,8 +4,8 @@
 // Usa as VIEWS do banco para retornar dados agregados.
 // TODO (alunos): implementar cada função abaixo.
 
-import dashboardModel from '../models/dashboardModel';
-import db from '../config/database.js';
+import dashboardModel from '../models/dashboardModel.js';
+import * as db from '../config/database.js';
 
 // GET /dashboard/admin - resumo geral de chamados e equipamentos (apenas admin)
 // Usa as views: view_resumo_chamados e view_resumo_equipamentos
@@ -46,4 +46,4 @@ const painelTecnico = async (req, res) => {
     }
 };
 
-module.exports = { resumoAdmin, painelTecnico };
+export default { resumoAdmin, painelTecnico };

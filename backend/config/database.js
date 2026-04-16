@@ -7,6 +7,14 @@
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import mysql from'mysql2/promise';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// LOG DE DEBUG 
+console.log('--- Tentando carregar configurações do Banco ---');
+console.log('DB_USER:', process.env.DB_USER || 'NÃO ENCONTRADO');
+console.log('DB_NAME:', process.env.DB_NAME || 'NÃO ENCONTRADO');
+console.log('-----------------------------------------------');
 
 // Cria um "pool" de conexões.
 // Um pool reutiliza conexões abertas ao invés de abrir uma nova a cada query,
@@ -112,7 +120,7 @@ async function hashPassword(password) {
     }
 }
 
-export default { 
+export{ 
     create, 
     read, 
     update, 
