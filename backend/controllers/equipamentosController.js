@@ -30,6 +30,7 @@ const listar = async (req, res) => {
 // GET /equipamentos/:id - retorna um equipamento pelo ID
 const buscarPorId = async (req, res) => {
   try {
+    const { id } = req.params;
     const equipamentoEspecifico = await equipamentosModel.buscarPorId(id);
 
     res.status(200).json({
@@ -153,4 +154,4 @@ const remover = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, criar, atualizar, remover };
+export { listar, buscarPorId, criar, atualizar, remover };

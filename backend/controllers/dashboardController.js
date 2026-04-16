@@ -5,7 +5,7 @@
 // TODO (alunos): implementar cada função abaixo.
 
 import dashboardModel from '../models/dashboardModel';
-const db = require('../config/database');
+import db from '../config/database.js';
 
 // GET /dashboard/admin - resumo geral de chamados e equipamentos (apenas admin)
 // Usa as views: view_resumo_chamados e view_resumo_equipamentos

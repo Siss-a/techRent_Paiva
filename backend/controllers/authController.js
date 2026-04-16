@@ -11,13 +11,14 @@
 //   - NUNCA coloque a senha no payload do token!
 
 
-const jwt = require('jsonwebtoken');
-import {
-  create,
-  read,
-  hashPassword,
-  comparePassword
-} from '../config/database.js';
+import jwt from 'jsonwebtoken';
+import { 
+  create, 
+  read, 
+  hashPassword, 
+  comparePassword 
+} 
+from '../config/database.js';
 
 // POST /auth/registro - cria um novo usuário
 const registro = async (req, res) => {
@@ -26,7 +27,7 @@ const registro = async (req, res) => {
 
     const emailFormatado = email.trim().toLowerCase();
 
-    
+
     // Verificar se já existe
     const usuarios = await read('usuarios', `email = '${emailFormatado}'`);
 
@@ -44,7 +45,7 @@ const registro = async (req, res) => {
     const usuarioId = await create('usuarios', {
       nome: nome.trim(),
       email: emailFormatado,
-      senha,
+      senha_hash,
       nivel_acesso
     });
 
@@ -130,5 +131,4 @@ const login = async (req, res) => {
     });
   }
 }
-
-module.exports = { registro, login };
+export { registro, login };

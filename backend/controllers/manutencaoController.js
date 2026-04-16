@@ -4,7 +4,7 @@
 // TODO (alunos): implementar cada função abaixo.
 
 import manutencaoModel from '../models/manutencaoModel';
-const db = require('../config/database');
+import { update } from '../config/database.js';
 
 // GET /manutencao - lista todos os registros de manutenção (admin/técnico)
 const listar = async (req, res) => {
@@ -75,4 +75,4 @@ const registrar = async (req, res) => {
   }
 };
 
-module.exports = { listar, registrar };
+export { listar, registrar };

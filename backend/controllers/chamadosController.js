@@ -8,14 +8,14 @@
 //                           -> cancelado
 
 import chamadosModel from '../models/chamadosModel';
-import db from '../config/database.js';
+import { update } from '../config/database.js';
 
 // GET /chamados - lista chamados
 //   admin/técnico -> todos os chamados
 //   cliente       -> apenas os seus (WHERE cliente_id = req.usuario.id)
 const listar = async (req, res) => {
   try {
-    const usuario  = req.usuario;
+    const usuario = req.usuario;
     const chamados = await chamadosModel.listar(usuario);
 
     res.status(200).json({
@@ -100,8 +100,8 @@ const criar = async (req, res) => {
         titulo,
         descricao,
         equipamento_id,
-        prioridade: chamadoCriado.prioridade,
-        status: chamadoCriado.status,
+        prioridade: dadosChamado.prioridade,
+        status: dadosChamado.status,
         cliente_id
       }
     });
@@ -160,4 +160,4 @@ const atualizarStatus = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, criar, atualizarStatus };
+export { listar, buscarPorId, criar, atualizarStatus }

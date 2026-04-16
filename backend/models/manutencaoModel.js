@@ -14,10 +14,10 @@ static async listar() {
     static async registrar(dadosManutencao){
         try{
 
-          return await create('historico_manutencao', `id = ${id}` )  
+          return await create('historico_manutencao',dadosManutencao )  
 
         }catch(error){
-            cconsole.error('Erro ao registrar manutenção:', error);
+            console.error('Erro ao registrar manutenção:', error);
             throw error;
         }
     }
