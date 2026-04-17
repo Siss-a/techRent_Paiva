@@ -1,14 +1,12 @@
 // =============================================
 // CONTROLLER DE CHAMADOS
 // =============================================
-// TODO (alunos): implementar cada função abaixo.
-//
 // Fluxo de status:
 //   aberto -> em_atendimento -> resolvido
 //                           -> cancelado
 
 import chamadosModel from '../models/chamadosModel.js';
-import { update } from '../config/database.js';
+import { update, deleteRecord } from '../config/database.js';
 
 // GET /chamados - lista chamados
 //   admin/técnico -> todos os chamados
@@ -61,14 +59,10 @@ const buscarPorId = async (req, res) => {
 // POST /chamados - abre um novo chamado (cliente/admin)
 // Body esperado: { titulo, descricao, equipamento_id, prioridade }
 const criar = async (req, res) => {
-  // TODO: inserir em chamados com cliente_id = req.usuario.id
-  //       e atualizar equipamentos.status para 'em_manutencao'
   try {
-
     const { titulo, descricao, equipamento_id, prioridade } = req.body;
     const cliente_id = req.usuario.id;
 
-     // Validação de campos obrigatórios
     if (!titulo || !equipamento_id) {
       return res.status(400).json({
         sucesso: false,
@@ -77,7 +71,6 @@ const criar = async (req, res) => {
     }
 
     const prioridadesValidas = ['baixa', 'media', 'alta'];
-
     if (prioridade && !prioridadesValidas.includes(prioridade)) {
       return res.status(400).json({
         sucesso: false,
@@ -96,7 +89,6 @@ const criar = async (req, res) => {
 
     const novoId = await chamadosModel.criar(dadosChamado);
 
-    // Atualiza o status do equipamento para 'em_manutencao' ?????
     await update('equipamentos', { status: 'em_manutencao' }, `id = ${equipamento_id}`);
 
     res.status(201).json({
@@ -116,8 +108,7 @@ const criar = async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao criar um novo chamado: ', error.message);
-    
-    // Se o erro for de Chave Estrangeira (ID não encontrado)
+
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(400).json({
         sucesso: false,
@@ -125,7 +116,6 @@ const criar = async (req, res) => {
       });
     }
 
-    // Para outros erros
     res.status(500).json({
       sucesso: false,
       erro: 'Erro interno do servidor ao criar chamado.'
@@ -133,11 +123,59 @@ const criar = async (req, res) => {
   }
 };
 
-// PUT /chamados/:id/status - atualiza o status do chamado (técnico/admin)
+// PUT /chamados/:id - atualização geral do chamado (técnico/admin)
+// Body esperado: { titulo, descricao, prioridade, status, equipamento_id }
+const atualizar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titulo, descricao, prioridade, status, equipamento_id } = req.body;
+
+    const chamado = await chamadosModel.buscarPorId(id);
+    if (!chamado) {
+      return res.status(404).json({
+        sucesso: false,
+        erro: 'Chamado não encontrado'
+      });
+    }
+
+    const dadosAtualizar = {};
+    if (titulo !== undefined) dadosAtualizar.titulo = titulo;
+    if (descricao !== undefined) dadosAtualizar.descricao = descricao;
+    if (prioridade !== undefined) dadosAtualizar.prioridade = prioridade;
+    if (status !== undefined) dadosAtualizar.status = status;
+    if (equipamento_id !== undefined) dadosAtualizar.equipamento_id = equipamento_id;
+
+    if (Object.keys(dadosAtualizar).length === 0) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Nenhum campo para atualizar foi fornecido.'
+      });
+    }
+
+    await chamadosModel.atualizarStatus(id, dadosAtualizar);
+
+    // Se status mudou para resolvido, libera o equipamento
+    if (status === 'resolvido' && chamado.equipamento_id) {
+      await update('equipamentos', { status: 'operacional' }, `id = ${chamado.equipamento_id}`);
+    }
+
+    res.status(200).json({
+      sucesso: true,
+      mensagem: 'Chamado atualizado com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar chamado:', error);
+    res.status(500).json({
+      sucesso: false,
+      erro: 'Erro interno ao atualizar chamado'
+    });
+  }
+};
+
+// PUT /chamados/:id/status - atualiza apenas o status (técnico/admin)
 // Body esperado: { status, tecnico_id (opcional) }
 const atualizarStatus = async (req, res) => {
-  // TODO: ex: aberto -> em_atendimento -> resolvido
-  //       ao resolver, atualizar equipamentos.status para 'operacional'
   try {
     const { id } = req.params;
     const { status, tecnico_id } = req.body;
@@ -150,8 +188,6 @@ const atualizarStatus = async (req, res) => {
       });
     }
 
-
-    // Verifica se o chamado existe
     const chamado = await chamadosModel.buscarPorId(id);
     if (!chamado) {
       return res.status(404).json({
@@ -165,7 +201,6 @@ const atualizarStatus = async (req, res) => {
 
     await chamadosModel.atualizarStatus(id, dadosAtualizar);
 
-    // Se resolvido, marca o equipamento como 'operacional' novamente
     if (status === 'resolvido' && chamado.equipamento_id) {
       await update('equipamentos', { status: 'operacional' }, `id = ${chamado.equipamento_id}`);
     }
@@ -177,8 +212,45 @@ const atualizarStatus = async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao atualizar status de um chamado: ', error);
-    throw error;
+    res.status(500).json({
+      sucesso: false,
+      erro: 'Erro interno ao atualizar status'
+    });
   }
 };
 
-export default{ listar, buscarPorId, criar, atualizarStatus }
+// DELETE /chamados/:id - remove um chamado (admin)
+const remover = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const chamado = await chamadosModel.buscarPorId(id);
+    if (!chamado) {
+      return res.status(404).json({
+        sucesso: false,
+        erro: 'Chamado não encontrado'
+      });
+    }
+
+    // Se o chamado estava em andamento, libera o equipamento
+    if (['aberto', 'em_atendimento'].includes(chamado.status) && chamado.equipamento_id) {
+      await update('equipamentos', { status: 'operacional' }, `id = ${chamado.equipamento_id}`);
+    }
+
+    await deleteRecord('chamados', `id = ${id}`);
+
+    res.status(200).json({
+      sucesso: true,
+      mensagem: 'Chamado removido com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao remover chamado:', error);
+    res.status(500).json({
+      sucesso: false,
+      erro: 'Erro interno ao remover chamado'
+    });
+  }
+};
+
+export default { listar, buscarPorId, criar, atualizar, atualizarStatus, remover };

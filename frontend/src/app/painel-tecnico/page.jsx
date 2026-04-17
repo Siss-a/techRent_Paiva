@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  Wrench, 
-  CheckCircle2, 
+import { Separator } from "@/components/ui/separator";
+import {
+  ClipboardList,
+  Wrench,
+  CheckCircle2,
   AlertCircle,
   ArrowRight
 } from "lucide-react";
@@ -45,7 +45,6 @@ export default function PainelTecnicoPage() {
     setLoading(true);
     const token = localStorage.getItem("token");
     try {
-      // Buscamos chamados e equipamentos para calcular as métricas
       const [resChamados, resEquipamentos] = await Promise.all([
         fetch(`${API_URL}/chamados`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/equipamentos`, { headers: { Authorization: `Bearer ${token}` } })
@@ -66,7 +65,6 @@ export default function PainelTecnicoPage() {
           equipamentosManutencao: equipamentos.filter(e => e.status === "em_manutencao").length
         });
 
-        // Pega os 5 últimos chamados para a lista
         setRecentes(chamados.slice(0, 5));
       }
     } catch (err) {
@@ -75,11 +73,11 @@ export default function PainelTecnicoPage() {
       setLoading(false);
     }
   }
-//Só para n deixar vazio
+
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -98,35 +96,35 @@ export default function PainelTecnicoPage() {
 
         {/* Cards de Métricas */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CardMetric 
-            title="Chamados Abertos" 
-            value={stats.abertos} 
-            icon={<AlertCircle className="text-blue-600" />} 
+          <CardMetric
+            title="Chamados Abertos"
+            value={stats.abertos}
+            icon={<AlertCircle className="text-blue-600" />}
             loading={loading}
           />
-          <CardMetric 
-            title="Em Atendimento" 
-            value={stats.emAndamento} 
-            icon={<Wrench className="text-amber-600" />} 
+          <CardMetric
+            title="Em Atendimento"
+            value={stats.emAndamento}
+            icon={<Wrench className="text-amber-600" />}
             loading={loading}
           />
-          <CardMetric 
-            title="Resolvidos" 
-            value={stats.resolvidos} 
-            icon={<CheckCircle2 className="text-green-600" />} 
+          <CardMetric
+            title="Resolvidos"
+            value={stats.resolvidos}
+            icon={<CheckCircle2 className="text-green-600" />}
             loading={loading}
           />
-          <CardMetric 
-            title="Em Manutenção" 
-            value={stats.equipamentosManutencao} 
-            icon={<ClipboardList className="text-slate-600" />} 
+          <CardMetric
+            title="Em Manutenção"
+            value={stats.equipamentosManutencao}
+            icon={<ClipboardList className="text-slate-600" />}
             loading={loading}
           />
         </div>
 
         {/* Conteúdo Principal */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          
+
           {/* Lista de Chamados Recentes */}
           <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -161,19 +159,19 @@ export default function PainelTecnicoPage() {
             </CardContent>
           </Card>
 
-          {/* Links Rápidos ou Avisos */}
+          {/* Links Rápidos */}
           <Card>
             <CardHeader>
               <CardTitle>Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3">
               <Button variant="outline" className="justify-start gap-2 w-full" asChild>
-                <Link href="/inventario?status=em_manutencao">
+                <Link href="/inventario">
                   <Wrench size={16} /> Corrigir Equipamentos
                 </Link>
               </Button>
               <Button variant="outline" className="justify-start gap-2 w-full" asChild>
-                <Link href="/chamados?status=aberto">
+                <Link href="/chamados">
                   <AlertCircle size={16} /> Atender Chamados
                 </Link>
               </Button>
@@ -204,8 +202,4 @@ function CardMetric({ title, value, icon, loading }) {
       </CardContent>
     </Card>
   );
-}
-
-function Separator() {
-  return <div className="h-px bg-slate-200 my-2" />;
 }

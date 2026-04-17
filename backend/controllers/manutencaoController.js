@@ -46,7 +46,7 @@ const registrar = async (req, res) => {
       equipamento_id,
       tecnico_id,
       descricao,
-      data_manutencao: new Date()
+      registrado_em: new Date()
     };
 
     const novoId = await manutencaoModel.registrar(dadosManutencao);
