@@ -3,9 +3,10 @@
 // =============================================
 // PÁGINA NOVO CHAMADO — /chamados/novo
 // =============================================
-// Recebe query params opcionais:
-//   ?equipamento_id=3&nome=Monitor+Dell
-// Pré-preenche o formulário quando vindo do inventário.
+// Busca equipamentos operacionais via GET /equipamentos
+// (filtrando status=operacional, equivalente à view_equipamentos_operacionais)
+// e exibe em um Select para o usuário escolher.
+// Pré-seleciona se vier query param ?equipamento_id=X
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -31,11 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, CheckCircle2, Package } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-// Inner component that uses useSearchParams (must be inside Suspense)
 function NovoChamadoForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,6 +44,12 @@ function NovoChamadoForm() {
   const equipamentoIdParam = searchParams.get("equipamento_id") || "";
   const nomeParam = searchParams.get("nome") || "";
 
+  // ── Lista de equipamentos operacionais ─────────────────
+  const [equipamentos, setEquipamentos] = useState([]);
+  const [carregandoEquip, setCarregandoEquip] = useState(true);
+  const [erroEquip, setErroEquip] = useState("");
+
+  // ── Formulário ─────────────────────────────────────────
   const [form, setForm] = useState({
     equipamento_id: equipamentoIdParam,
     titulo: nomeParam ? `Problema com ${nomeParam}` : "",
@@ -54,6 +61,57 @@ function NovoChamadoForm() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
 
+  // ── Busca equipamentos operacionais ────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) { router.push("/login"); return; }
+
+    async function buscarEquipamentos() {
+      setCarregandoEquip(true);
+      try {
+        const res = await fetch(`${API_URL}/equipamentos`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const dados = await res.json();
+        if (dados.sucesso) {
+          // Filtra apenas os operacionais — espelha a view_equipamentos_operacionais
+          const operacionais = dados.dados.filter(
+            (e) => e.status === "operacional"
+          );
+          setEquipamentos(operacionais);
+
+          // Se veio por query param e ainda está operacional, mantém
+          // Se não veio param, pré-seleciona o primeiro disponível
+          if (!equipamentoIdParam && operacionais.length > 0) {
+            setForm((prev) => ({
+              ...prev,
+              equipamento_id: String(operacionais[0].id),
+              titulo: prev.titulo || `Problema com ${operacionais[0].nome}`,
+            }));
+          }
+        } else {
+          setErroEquip("Não foi possível carregar a lista de equipamentos.");
+        }
+      } catch {
+        setErroEquip("Erro de conexão ao buscar equipamentos.");
+      } finally {
+        setCarregandoEquip(false);
+      }
+    }
+
+    buscarEquipamentos();
+  }, []);
+
+  // Atualiza o título sugerido ao mudar o equipamento no Select
+  function handleEquipamentoChange(value) {
+    const equip = equipamentos.find((e) => String(e.id) === value);
+    setForm((prev) => ({
+      ...prev,
+      equipamento_id: value,
+      titulo: equip ? `Problema com ${equip.nome}` : prev.titulo,
+    }));
+  }
+
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -64,18 +122,14 @@ function NovoChamadoForm() {
     setErro("");
 
     if (!form.equipamento_id || !form.titulo.trim()) {
-      setErro("ID do equipamento e título são obrigatórios.");
+      setErro("Selecione um equipamento e informe o título.");
       return;
     }
 
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) { router.push("/login"); return; }
 
     setEnviando(true);
-
     try {
       const resposta = await fetch(`${API_URL}/chamados`, {
         method: "POST",
@@ -100,9 +154,8 @@ function NovoChamadoForm() {
 
       setSucesso(true);
       setTimeout(() => router.push("/chamados"), 2000);
-    } catch (err) {
+    } catch {
       setErro("Erro de conexão com o servidor.");
-      console.error(err);
     } finally {
       setEnviando(false);
     }
@@ -126,11 +179,16 @@ function NovoChamadoForm() {
     );
   }
 
+  // Equipamento pré-selecionado (vindo do inventário)
+  const equipamentoPreSelecionado =
+    equipamentoIdParam
+      ? equipamentos.find((e) => String(e.id) === equipamentoIdParam)
+      : null;
+
   return (
     <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg flex flex-col gap-4">
 
-        {/* Breadcrumb / voltar */}
         <Link
           href="/inventario"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground w-fit"
@@ -143,9 +201,8 @@ function NovoChamadoForm() {
           <CardHeader>
             <CardTitle>Abrir Chamado</CardTitle>
             <CardDescription>
-              {nomeParam
-                ? `Equipamento selecionado: ${nomeParam}`
-                : "Informe o equipamento com problema e descreva a situação."}
+              Selecione o equipamento com problema e descreva a situação.
+              Apenas equipamentos <strong>operacionais</strong> estão disponíveis.
             </CardDescription>
           </CardHeader>
 
@@ -158,26 +215,59 @@ function NovoChamadoForm() {
                 </Alert>
               )}
 
-              {/* ID do equipamento */}
+              {erroEquip && (
+                <Alert variant="destructive">
+                  <AlertDescription>{erroEquip}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Select de equipamento — usa view_equipamentos_operacionais */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="equipamento_id">ID do equipamento</Label>
-                <Input
-                  id="equipamento_id"
-                  name="equipamento_id"
-                  type="number"
-                  min="1"
-                  placeholder="Ex: 3"
-                  required
-                  value={form.equipamento_id}
-                  onChange={handleChange}
-                />
-                {!equipamentoIdParam && (
+                <Label htmlFor="equipamento_id">Equipamento</Label>
+
+                {carregandoEquip ? (
+                  <Skeleton className="h-8 w-full rounded-lg" />
+                ) : equipamentos.length === 0 ? (
+                  <Alert>
+                    <Package size={16} />
+                    <AlertDescription>
+                      Nenhum equipamento operacional disponível no momento.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Select
+                    value={form.equipamento_id}
+                    onValueChange={handleEquipamentoChange}
+                    required
+                  >
+                    <SelectTrigger id="equipamento_id" className="w-full">
+                      <SelectValue placeholder="Selecione o equipamento…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {equipamentos.map((e) => (
+                        <SelectItem key={e.id} value={String(e.id)}>
+                          <span className="font-medium">#{e.id}</span>
+                          {" — "}
+                          {e.nome}
+                          {e.categoria && (
+                            <span className="text-muted-foreground ml-1">
+                              ({e.categoria})
+                            </span>
+                          )}
+                          {e.patrimonio && (
+                            <span className="text-muted-foreground ml-1 font-mono text-xs">
+                              · {e.patrimonio}
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {equipamentoPreSelecionado && (
                   <p className="text-xs text-muted-foreground">
-                    Você pode ver os IDs na página de{" "}
-                    <Link href="/inventario" className="underline">
-                      Inventário
-                    </Link>
-                    .
+                    Pré-selecionado: <strong>{equipamentoPreSelecionado.nome}</strong>
                   </p>
                 )}
               </div>
@@ -238,7 +328,10 @@ function NovoChamadoForm() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={enviando}>
+              <Button
+                type="submit"
+                disabled={enviando || carregandoEquip || equipamentos.length === 0}
+              >
                 {enviando ? "Enviando…" : "Abrir Chamado"}
               </Button>
             </CardFooter>
@@ -249,7 +342,6 @@ function NovoChamadoForm() {
   );
 }
 
-// Wrapper with Suspense required for useSearchParams in Next.js App Router
 export default function NovoChamadoPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>

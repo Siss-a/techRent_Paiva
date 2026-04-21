@@ -1,14 +1,10 @@
 "use client";
 
-// =============================================
-// PÁGINA DE LOGIN — /login
-// =============================================
-// Responsabilidades:
-//   1. Renderizar formulário de e-mail + senha
-//   2. Enviar POST /api/login com fetch nativo
-//   3. Salvar o token JWT no localStorage
-//   4. Redirecionar o usuário conforme nivel_acesso
-// =============================================
+// Renderizar formulário de e-mail + senha
+// Enviar POST /api/login com fetch nativo
+// Salvar o token JWT no localStorage
+// Redirecionar o usuário conforme nivel_acesso
+
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";

@@ -7,34 +7,51 @@ import {
 } from '../config/database.js';
 
 // POST /auth/registro - cria um novo usuário
+// Registro de um novo usuário. Padrão: nível 'cliente'
+// Acesso: Público
 const registro = async (req, res) => {
   try {
     const { nome, email, senha, nivel_acesso } = req.body;
 
+    //validacoes
     if (!nome || !email || !senha) {
       return res.status(400).json({
         sucesso: false,
         erro: 'Campos obrigatórios: nome, email, senha'
       });
     }
+    //Formato de e-mail (Regex simples)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ sucesso: false, erro: 'Formato de email inválido' });
+    }
 
-    const emailFormatado = email.trim().toLowerCase();
+    //Tamanho mínimo de senha
+    if (senha.length < 8) {
+      return res.status(400).json({ sucesso: false, erro: 'A senha deve ter pelo menos 8 caracteres' });
+    }
+
+    const emailFormatado = email.trim();
 
     const usuarios = await read('usuarios', `email = '${emailFormatado}'`);
+    //tamanho de usuario
     if (usuarios.length > 0) {
       return res.status(409).json({
         sucesso: false,
         erro: 'Email já cadastrado'
       });
     }
+    //tamanho senha 
+    if (senha.length < 6) {
+      return res.status(400).json({ sucesso: false, erro: 'Senha muito curta' });
+    }
 
     const senhaHash = await hashPassword(senha);
 
-    // A coluna no banco é 'senha_hash'
     const usuarioId = await create('usuarios', {
       nome: nome.trim(),
       email: emailFormatado,
-      senha_hash: senhaHash,
+      senha: senhaHash,
       nivel_acesso: nivel_acesso || 'cliente'
     });
 
@@ -57,16 +74,36 @@ const registro = async (req, res) => {
 };
 
 // POST /auth/login - autentica e retorna JWT
+// Acesso: Público
+// Gera token => dura 24h
 const login = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
+    //validacoes
     if (!email || !senha) {
       return res.status(400).json({
         sucesso: false,
         erro: 'Campos obrigatórios: email, senha'
       });
     }
+    // Validação de formato de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailFormatado)) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Credenciais inválidas'
+      });
+    }
+
+    // Validação de tamanho mínimo
+    if (senha.length < 6) {
+      return res.status(401).json({
+        sucesso: false,
+        erro: 'Credenciais inválidas'
+      });
+    }
+
 
     const emailFormatado = email.trim().toLowerCase();
 
@@ -80,8 +117,7 @@ const login = async (req, res) => {
 
     const usuario = usuarios[0];
 
-    // Usa o campo 'senha_hash' que é o nome da coluna no banco
-    const senhaValida = await comparePassword(senha, usuario.senha_hash);
+    const senhaValida = await comparePassword(senha, usuario.senha);
     if (!senhaValida) {
       return res.status(401).json({
         sucesso: false,

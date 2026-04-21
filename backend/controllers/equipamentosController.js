@@ -11,6 +11,13 @@ const listar = async (req, res) => {
   try {
 
     //VALIDAÇÕES
+    if (nome && nome.length < 3) {
+      return res.status(400).json({ sucesso: false, erro: 'Nome do equipamento muito curto' });
+    }
+
+    if (patrimonio && patrimonio.toString().length < 4) {
+      return res.status(400).json({ sucesso: false, erro: 'Patrimônio inválido ou muito curto' });
+    }
     //FIM VALIDAÇÕES
 
     const equipamentos = await equipamentosModel.listar();
@@ -32,6 +39,13 @@ const buscarPorId = async (req, res) => {
   try {
     const { id } = req.params;
     const equipamentoEspecifico = await equipamentosModel.buscarPorId(id);
+
+    if (!equipamentoEspecifico) {
+      return res.status(404).json({
+        sucesso: false,
+        error: 'Equipamento não encontrado'
+      });
+    }
 
     res.status(200).json({
       sucesso: true,
@@ -98,6 +112,15 @@ const atualizar = async (req, res) => {
     const { id } = req.params;
     const { nome, categoria, patrimonio, status, descricao } = req.body;
 
+    //validacoes
+    if (nome && nome.length < 3) {
+      return res.status(400).json({ sucesso: false, erro: 'Nome do equipamento muito curto' });
+    }
+
+    if (patrimonio && patrimonio.toString().length < 4) {
+      return res.status(400).json({ sucesso: false, erro: 'Patrimônio inválido ou muito curto' });
+    }
+    //fim validacoes
     const dadosAtualizacao = {};
 
     if (nome) dadosAtualizacao.nome = nome;
@@ -134,24 +157,44 @@ const atualizar = async (req, res) => {
 
 // DELETE /equipamentos/:id - remove um equipamento (apenas admin)
 const remover = async (req, res) => {
-  try{
+  try {
 
     const { id } = req.params;
 
-     const resultado = await equipamentosModel.remover(id);
+    const chamadoVinculado = await chamadosModel.buscarPorEquipamento(id);
+    if (chamadoVinculado) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Não é possível remover: este equipamento possui históricos de chamados.',
+      });
+    }
 
-     res.status(200).json({
-                sucesso: true,
-                mensagem: 'Equipamento excluído com sucesso',
-                dados: {
-                    linhasAfetadas: resultado || 1
-                }
-            });
+    const equipamento = await equipamentosModel.buscarPorId(id);
+    if (!equipamento) {
+      return res.status(404).json({ sucesso: false, erro: 'Equipamento não encontrado' });
+    }
 
-  }catch(error){
+    if (equipamento.status === 'em_manutencao') {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Equipamento em manutenção não pode ser excluído do sistema.'
+      });
+    }
+
+    const resultado = await equipamentosModel.remover(id);
+
+    res.status(200).json({
+      sucesso: true,
+      mensagem: 'Equipamento excluído com sucesso',
+      dados: {
+        linhasAfetadas: resultado || 1
+      }
+    });
+
+  } catch (error) {
     console.error('Erro ao remover um equipamento', error);
     throw error;
   }
 };
 
-export default{ listar, buscarPorId, criar, atualizar, remover };
+export default { listar, buscarPorId, criar, atualizar, remover };

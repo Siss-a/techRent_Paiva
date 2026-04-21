@@ -10,7 +10,10 @@ class dashboardModel {
                 read('view_resumo_equipamentos')
             ]);
 
-            return { chamados, equipamentos };
+            return { 
+            chamados: chamados || [], 
+            equipamentos: equipamentos || [] 
+        };
 
         } catch (error) {
             console.error('Erro ao listar o resumo Admin')

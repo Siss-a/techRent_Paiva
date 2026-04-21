@@ -2,7 +2,7 @@ import { create, read, update, deleteRecord, comparePassword, hashPassword, getC
 
 
 class manutencaoModel {
-static async listar() {
+    static async listar() {
         try {
             return await read('historico_manutencao');
         } catch (error) {
@@ -11,17 +11,21 @@ static async listar() {
         }
     }
 
-    static async registrar(dadosManutencao){
-        try{
+    static async registrar(dadosManutencao) {
+        try {
+            // Garantir que a data de registro seja inserida se não enviada
+            const dadosComData = {
+                ...dadosManutencao,
+                registrado_em: dadosManutencao.registrado_em || new Date()
+            };
 
-          return await create('historico_manutencao',dadosManutencao )  
-
-        }catch(error){
+            return await create('historico_manutencao', dadosComData);
+        } catch (error) {
             console.error('Erro ao registrar manutenção:', error);
             throw error;
         }
     }
-    
+
 
 }
 

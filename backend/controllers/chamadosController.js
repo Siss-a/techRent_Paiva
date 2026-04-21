@@ -35,6 +35,14 @@ const buscarPorId = async (req, res) => {
     const { id } = req.params;
     const chamado = await chamadosModel.buscarPorId(id);
 
+    // Validar se o cliente tem permissão para ver ESSE chamado específico
+    if (req.usuario.nivel_acesso === 'cliente' && chamado.cliente_id !== req.usuario.id) {
+      return res.status(403).json({
+        sucesso: false,
+        erro: 'Você não tem permissão para acessar este chamado'
+      });
+    }
+
     if (!chamado) {
       return res.status(404).json({
         sucesso: false,
@@ -67,6 +75,13 @@ const criar = async (req, res) => {
       return res.status(400).json({
         sucesso: false,
         erro: 'Campos obrigatórios: titulo, equipamento_id'
+      });
+    }
+    //ve o estado status atual do equipamento
+    if (equipamento.status === 'em_manutencao') {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Este equipamento já possui um chamado em aberto.'
       });
     }
 
@@ -152,11 +167,23 @@ const atualizar = async (req, res) => {
       });
     }
 
+    // Impedir que o cliente mude o cliente_id do chamado para outro usuário
+    if (req.body.cliente_id && req.usuario.nivel_acesso !== 'admin') {
+      delete dadosAtualizar.cliente_id; // Segurança: cliente não muda o dono do chamado
+    }
+
     await chamadosModel.atualizarStatus(id, dadosAtualizar);
 
     // Se status mudou para resolvido, libera o equipamento
     if (status === 'resolvido' && chamado.equipamento_id) {
       await update('equipamentos', { status: 'operacional' }, `id = ${chamado.equipamento_id}`);
+    }
+    //se o chamado já estiver encerrado, não permite editar nada
+    if (['resolvido', 'cancelado'].includes(chamado.status)) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Não é possível alterar o status de um chamado já finalizado.'
+      });
     }
 
     res.status(200).json({

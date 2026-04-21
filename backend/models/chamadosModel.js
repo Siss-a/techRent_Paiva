@@ -23,7 +23,7 @@ class chamadosModel {
     // GET /chamados/:id - retorna um chamado pelo ID
     static async buscarPorId(id){
         try{
-
+            // Garantir que o ID seja tratado como número ou string segura
             const rows = await read('chamados', ` id = ${id}`);
             return rows[0] || null;
 

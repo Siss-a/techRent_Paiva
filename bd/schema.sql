@@ -97,11 +97,4 @@ CREATE TABLE historico_manutencao (
     CONSTRAINT fk_hist_tecnico FOREIGN KEY (tecnico_id)
         REFERENCES usuarios(id)
 );
--- =============================================
--- 4. ADICIONAR USUARIO E EQUIPAMENTOS E edição
--- =============================================
-
-/* Alterando a senha para o formato hash */
-ALTER TABLE usuarios CHANGE COLUMN senha senha_hash VARCHAR(255) NOT NULL;
-
 

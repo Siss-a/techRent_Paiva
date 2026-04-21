@@ -1,29 +1,22 @@
 "use client";
 
+// =============================================
+// LISTA DE CHAMADOS — /chamados
+// =============================================
+// Clientes veem apenas os seus.
+// Admins e Técnicos veem todos.
+// Botão de excluir apenas para Admin.
+// Linha clicável leva à página de detalhes.
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// Componentes shadcn/ui
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -40,14 +33,19 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { Pencil, Trash2, Search, FilterX } from "lucide-react";
+import { Pencil, Trash2, Search, FilterX, Eye } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-// ── Helpers ───────────────────────────────────────────
 const STATUS_BADGE = {
   aberto: "default",
   em_atendimento: "secondary",
@@ -72,17 +70,17 @@ function formatarData(iso) {
 export default function ChamadosPage() {
   const router = useRouter();
 
-  // ── Estados de Dados ──────────────────────────────────
   const [chamados, setChamados] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [nivelAcesso, setNivelAcesso] = useState("");
 
-  // ── Estados de Filtro/Pesquisa ────────────────────────
+  // Filtros
   const [pesquisa, setPesquisa] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroPrioridade, setFiltroPrioridade] = useState("todos");
 
-  // ── Estados de Formulário (Criação/Edição) ────────────
+  // Modal criar/editar
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState({
@@ -90,14 +88,18 @@ export default function ChamadosPage() {
     titulo: "",
     descricao: "",
     prioridade: "media",
-    status: "aberto"
+    status: "aberto",
   });
   const [enviando, setEnviando] = useState(false);
 
-  // ── Busca inicial ──────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const userRaw = localStorage.getItem("usuario");
     if (!token) { router.push("/login"); return; }
+    if (userRaw) {
+      const u = JSON.parse(userRaw);
+      setNivelAcesso(u.nivel_acesso);
+    }
     buscarChamados();
   }, [router]);
 
@@ -105,20 +107,19 @@ export default function ChamadosPage() {
     setCarregando(true);
     const token = localStorage.getItem("token");
     try {
-      const resposta = await fetch(`${API_URL}/chamados`, {
+      const res = await fetch(`${API_URL}/chamados`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const dados = await resposta.json();
+      const dados = await res.json();
       if (dados.sucesso) setChamados(dados.dados);
       else setErro(dados.erro);
-    } catch (err) {
+    } catch {
       setErro("Erro de conexão.");
     } finally {
       setCarregando(false);
     }
   }
 
-  // ── Handlers de CRUD ──────────────────────────────────
   const abrirEdicao = (chamado) => {
     setEditandoId(chamado.id);
     setForm({
@@ -126,7 +127,7 @@ export default function ChamadosPage() {
       titulo: chamado.titulo,
       descricao: chamado.descricao || "",
       prioridade: chamado.prioridade,
-      status: chamado.status
+      status: chamado.status,
     });
     setMostrarForm(true);
   };
@@ -136,10 +137,12 @@ export default function ChamadosPage() {
     setEnviando(true);
     const token = localStorage.getItem("token");
     const metodo = editandoId ? "PUT" : "POST";
-    const url = editandoId ? `${API_URL}/chamados/${editandoId}` : `${API_URL}/chamados`;
+    const url = editandoId
+      ? `${API_URL}/chamados/${editandoId}`
+      : `${API_URL}/chamados`;
 
     try {
-      const resposta = await fetch(url, {
+      const res = await fetch(url, {
         method: metodo,
         headers: {
           "Content-Type": "application/json",
@@ -147,8 +150,7 @@ export default function ChamadosPage() {
         },
         body: JSON.stringify(form),
       });
-
-      if (resposta.ok) {
+      if (res.ok) {
         setMostrarForm(false);
         setEditandoId(null);
         setForm({ equipamento_id: "", titulo: "", descricao: "", prioridade: "media", status: "aberto" });
@@ -161,7 +163,9 @@ export default function ChamadosPage() {
     }
   }
 
+  // ⚠️ Corrigido: somente admins chamam DELETE
   async function handleExcluir(id) {
+    if (nivelAcesso !== "admin") return;
     if (!confirm("Tem certeza que deseja excluir este chamado?")) return;
     const token = localStorage.getItem("token");
     try {
@@ -169,32 +173,42 @@ export default function ChamadosPage() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) setChamados(prev => prev.filter(c => c.id !== id));
-    } catch (err) {
+      if (res.ok) setChamados((prev) => prev.filter((c) => c.id !== id));
+    } catch {
       alert("Erro ao excluir.");
     }
   }
 
-  // ── Lógica de Filtro ──────────────────────────────────
   const chamadosFiltrados = chamados.filter((c) => {
-    const searchMatch = 
-      c.titulo.toLowerCase().includes(pesquisa.toLowerCase()) || 
+    const searchMatch =
+      c.titulo.toLowerCase().includes(pesquisa.toLowerCase()) ||
       c.id.toString() === pesquisa;
     const statusMatch = filtroStatus === "todos" || c.status === filtroStatus;
     const prioridadeMatch = filtroPrioridade === "todos" || c.prioridade === filtroPrioridade;
-    
     return searchMatch && statusMatch && prioridadeMatch;
   });
+
+  // Técnicos podem editar status mas não criar chamados nem excluir
+  const podeEditar = nivelAcesso === "admin" || nivelAcesso === "tecnico";
+  const podeCriar = nivelAcesso === "admin" || nivelAcesso === "cliente";
 
   return (
     <main className="min-h-screen bg-slate-50">
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Gestão de Chamados</h1>
         <div className="flex gap-2">
-          
-          <Button size="sm" onClick={() => { setEditandoId(null); setMostrarForm(true); }}>
-            + Novo chamado
-          </Button>
+          {podeCriar && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditandoId(null);
+                setForm({ equipamento_id: "", titulo: "", descricao: "", prioridade: "media", status: "aberto" });
+                setMostrarForm(true);
+              }}
+            >
+              + Novo chamado
+            </Button>
+          )}
           <Link href="/inventario">
             <Button variant="outline" size="sm">Inventário</Button>
           </Link>
@@ -203,17 +217,16 @@ export default function ChamadosPage() {
           </Link>
         </div>
       </header>
-      
 
       <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-6">
-        
-        {/* ── Barra de Busca e Filtros ── */}
+
+        {/* Filtros */}
         <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-lg border shadow-sm">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-            <Input 
-              placeholder="Pesquisar por ID ou Título..." 
-              className="pl-9" 
+            <Input
+              placeholder="Pesquisar por ID ou Título..."
+              className="pl-9"
               value={pesquisa}
               onChange={(e) => setPesquisa(e.target.value)}
             />
@@ -241,12 +254,20 @@ export default function ChamadosPage() {
               <SelectItem value="alta">Alta</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="icon" onClick={() => {setPesquisa(""); setFiltroStatus("todos"); setFiltroPrioridade("todos")}}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setPesquisa("");
+              setFiltroStatus("todos");
+              setFiltroPrioridade("todos");
+            }}
+          >
             <FilterX size={20} />
           </Button>
         </div>
 
-        {/* ── Tabela de Dados ── */}
+        {/* Tabela */}
         <div className="rounded-md border bg-white overflow-hidden shadow-sm">
           <Table>
             <TableHeader className="bg-slate-50">
@@ -262,11 +283,17 @@ export default function ChamadosPage() {
             <TableBody>
               {carregando ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                  <TableRow key={i}>
+                    <TableCell colSpan={6}>
+                      <Skeleton className="h-6 w-full" />
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : chamadosFiltrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Nenhum chamado encontrado.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    Nenhum chamado encontrado.
+                  </TableCell>
                 </TableRow>
               ) : (
                 chamadosFiltrados.map((c) => (
@@ -277,12 +304,47 @@ export default function ChamadosPage() {
                       <Badge variant={PRIORIDADE_BADGE[c.prioridade]}>{c.prioridade}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_BADGE[c.status]}>{c.status.replace("_", " ")}</Badge>
+                      <Badge variant={STATUS_BADGE[c.status]}>
+                        {c.status.replace("_", " ")}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{formatarData(c.aberto_em)}</TableCell>
-                    <TableCell className="text-right flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => abrirEdicao(c)}><Pencil size={16} /></Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleExcluir(c.id)}><Trash2 size={16} /></Button>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatarData(c.aberto_em)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {/* Ver detalhes — disponível para todos */}
+                        <Link href={`/chamados/${c.id}`}>
+                          <Button variant="ghost" size="icon" title="Ver detalhes">
+                            <Eye size={16} />
+                          </Button>
+                        </Link>
+
+                        {/* Editar status — técnico e admin */}
+                        {podeEditar && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => abrirEdicao(c)}
+                            title="Editar"
+                          >
+                            <Pencil size={16} />
+                          </Button>
+                        )}
+
+                        {/* Excluir — SOMENTE admin */}
+                        {nivelAcesso === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleExcluir(c.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -292,7 +354,7 @@ export default function ChamadosPage() {
         </div>
       </div>
 
-      {/* ── Modal de Formulário (Cria/Edita) ── */}
+      {/* Modal editar */}
       <Dialog open={mostrarForm} onOpenChange={setMostrarForm}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -303,11 +365,19 @@ export default function ChamadosPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>ID Equipamento</Label>
-                <Input type="number" required value={form.equipamento_id} onChange={e => setForm({...form, equipamento_id: e.target.value})} />
+                <Input
+                  type="number"
+                  required
+                  value={form.equipamento_id}
+                  onChange={(e) => setForm({ ...form, equipamento_id: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Prioridade</Label>
-                <Select value={form.prioridade} onValueChange={v => setForm({...form, prioridade: v})}>
+                <Select
+                  value={form.prioridade}
+                  onValueChange={(v) => setForm({ ...form, prioridade: v })}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="baixa">Baixa</SelectItem>
@@ -318,30 +388,45 @@ export default function ChamadosPage() {
               </div>
             </div>
             {editandoId && (
-               <div className="space-y-2">
-               <Label>Status</Label>
-               <Select value={form.status} onValueChange={v => setForm({...form, status: v})}>
-                 <SelectTrigger><SelectValue /></SelectTrigger>
-                 <SelectContent>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => setForm({ ...form, status: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
                     <SelectItem value="aberto">Aberto</SelectItem>
                     <SelectItem value="em_atendimento">Em Atendimento</SelectItem>
                     <SelectItem value="resolvido">Resolvido</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <div className="space-y-2">
               <Label>Título</Label>
-              <Input required value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} />
+              <Input
+                required
+                value={form.titulo}
+                onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea rows={3} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} />
+              <Textarea
+                rows={3}
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setMostrarForm(false)}>Cancelar</Button>
-              <Button type="submit" disabled={enviando}>{enviando ? "Salvando..." : "Salvar"}</Button>
+              <Button type="button" variant="outline" onClick={() => setMostrarForm(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={enviando}>
+                {enviando ? "Salvando..." : "Salvar"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -2,6 +2,8 @@
 // CONTROLLER DE HISTÓRICO DE MANUTENÇÃO
 // =============================================
 // TODO (alunos): implementar cada função abaixo.
+// gerebcia a tabela de auditoria que liga Tecnicos, CHamado e Equipamento
+// Fluxo esperado: aberto -> em_atendimento -> (registrar manutenção) -> resolvido/operacional.
 
 import manutencaoModel from '../models/manutencaoModel.js';
 import { update } from '../config/database.js';
@@ -41,6 +43,27 @@ const registrar = async (req, res) => {
       });
     }
 
+    //Validar se o chamado existe e pertence ao equipamento
+    const chamado = await chamadosModel.buscarPorId(chamado_id);
+    if (!chamado) {
+      return res.status(404).json({ sucesso: false, erro: 'Chamado não encontrado' });
+    }
+
+    if (chamado.equipamento_id !== equipamento_id) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'O equipamento informado não corresponde ao equipamento do chamado.'
+      });
+    }
+
+    // Impedir duplicidade de resolução
+    if (chamado.status === 'resolvido') {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Este chamado já foi finalizado anteriormente.'
+      });
+    }
+
     const dadosManutencao = {
       chamado_id,
       equipamento_id,
@@ -75,4 +98,4 @@ const registrar = async (req, res) => {
   }
 };
 
-export default{ listar, registrar };
+export default { listar, registrar };

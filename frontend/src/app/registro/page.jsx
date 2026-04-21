@@ -1,14 +1,10 @@
 "use client";
 
-// =============================================
-// PÁGINA DE CADASTRO — /registro
-// =============================================
-// Responsabilidades:
-//   1. Renderizar formulário: nome, e-mail, senha, confirmação
-//   2. Validar campos antes de enviar (client-side simples)
-//   3. Enviar POST /auth/registro com fetch nativo
-//   4. Redirecionar para /login após sucesso
-// =============================================
+//Renderizar formulário: nome, e-mail, senha, confirmação
+//Validar campos antes de enviar (client-side simples)
+//Enviar POST /auth/registro com fetch nativo
+//Redirecionar para /login após sucesso
+
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
