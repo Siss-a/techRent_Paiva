@@ -5,20 +5,11 @@
 // Cada função recebe (req, res) e deve retornar uma resposta JSON.
 
 import equipamentosModel from '../models/equipamentosModel.js';
+import chamadosModel from '../models/chamadosModel.js'
 
 // GET /equipamentos - lista todos os equipamentos do inventário
 const listar = async (req, res) => {
   try {
-
-    //VALIDAÇÕES
-    if (nome && nome.length < 3) {
-      return res.status(400).json({ sucesso: false, erro: 'Nome do equipamento muito curto' });
-    }
-
-    if (patrimonio && patrimonio.toString().length < 4) {
-      return res.status(400).json({ sucesso: false, erro: 'Patrimônio inválido ou muito curto' });
-    }
-    //FIM VALIDAÇÕES
 
     const equipamentos = await equipamentosModel.listar();
 
@@ -65,12 +56,27 @@ const criar = async (req, res) => {
     const { nome, categoria, patrimonio, status, descricao } = req.body;
 
     //VALIDAÇÕES
+    if (!nome || !categoria || !patrimonio) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Campos obrigatórios: nome, categoria, patrimonio'
+      });
+    }
 
     const statusValidos = ['operacional', 'em_manutencao', 'desativado'];
 
     if (status && !statusValidos.includes(status)) {
       return res.status(400).json({
         erro: 'Status inválido'
+      });
+    }
+
+    const equipamentoExistente = await equipamentosModel.buscarPorPatrimonio(patrimonio);
+
+    if (equipamentoExistente) {
+      return res.status(409).json({
+        sucesso: false,
+        erro: 'Já existe um equipamento cadastrado com este número de patrimônio.'
       });
     }
 
@@ -125,6 +131,9 @@ const atualizar = async (req, res) => {
 
     if (nome) dadosAtualizacao.nome = nome;
     if (categoria) dadosAtualizacao.categoria = categoria;
+    if (categoria !== undefined) {
+      dadosAtualizacao.categoria = categoria;
+    }
     if (patrimonio) dadosAtualizacao.patrimonio = patrimonio;
     if (status) dadosAtualizacao.status = status;
     if (descricao) dadosAtualizacao.descricao = descricao;

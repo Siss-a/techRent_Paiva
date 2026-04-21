@@ -7,6 +7,7 @@
 
 import manutencaoModel from '../models/manutencaoModel.js';
 import { update } from '../config/database.js';
+import chamadosModel from '../models/chamadosModel.js';
 
 // GET /manutencao - lista todos os registros de manutenção (admin/técnico)
 const listar = async (req, res) => {

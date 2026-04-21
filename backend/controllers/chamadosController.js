@@ -35,6 +35,13 @@ const buscarPorId = async (req, res) => {
     const { id } = req.params;
     const chamado = await chamadosModel.buscarPorId(id);
 
+    if (!chamado) {
+      return res.status(404).json({
+        sucesso: false,
+        erro: 'Chamado não encontrado'
+      });
+    }
+
     // Validar se o cliente tem permissão para ver ESSE chamado específico
     if (req.usuario.nivel_acesso === 'cliente' && chamado.cliente_id !== req.usuario.id) {
       return res.status(403).json({
@@ -43,12 +50,6 @@ const buscarPorId = async (req, res) => {
       });
     }
 
-    if (!chamado) {
-      return res.status(404).json({
-        sucesso: false,
-        erro: 'Chamado não encontrado'
-      });
-    }
 
     res.status(200).json({
       sucesso: true,
@@ -70,7 +71,7 @@ const criar = async (req, res) => {
   try {
     const { titulo, descricao, equipamento_id, prioridade } = req.body;
     const cliente_id = req.usuario.id;
-
+    const equipamento = equipamentosModel.buscarPorId(equipamento_id);
     if (!titulo || !equipamento_id) {
       return res.status(400).json({
         sucesso: false,
@@ -90,6 +91,15 @@ const criar = async (req, res) => {
       return res.status(400).json({
         sucesso: false,
         erro: 'Prioridade inválida'
+      });
+    }
+
+    const equipamentoExistente = await equipamentosModel.buscarPorPatrimonio(patrimonio);
+
+    if (equipamentoExistente) {
+      return res.status(409).json({ // 409 Conflict é o status ideal para duplicatas
+        sucesso: false,
+        erro: 'Já existe um equipamento cadastrado com este número de patrimônio.'
       });
     }
 
@@ -145,6 +155,13 @@ const atualizar = async (req, res) => {
     const { id } = req.params;
     const { titulo, descricao, prioridade, status, equipamento_id } = req.body;
 
+    if (req.body.id && req.body.id.toString() !== id.toString()) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'O ID de um chamado é imutável.'
+      });
+    }
+
     const chamado = await chamadosModel.buscarPorId(id);
     if (!chamado) {
       return res.status(404).json({
@@ -152,6 +169,7 @@ const atualizar = async (req, res) => {
         erro: 'Chamado não encontrado'
       });
     }
+
 
     const dadosAtualizar = {};
     if (titulo !== undefined) dadosAtualizar.titulo = titulo;
@@ -208,12 +226,6 @@ const atualizarStatus = async (req, res) => {
     const { status, tecnico_id } = req.body;
 
     const statusValidos = ['em_atendimento', 'resolvido', 'cancelado'];
-    if (!status || !statusValidos.includes(status)) {
-      return res.status(400).json({
-        sucesso: false,
-        erro: 'Status inválido. Use: em_atendimento, resolvido ou cancelado'
-      });
-    }
 
     const chamado = await chamadosModel.buscarPorId(id);
     if (!chamado) {
@@ -223,14 +235,18 @@ const atualizarStatus = async (req, res) => {
       });
     }
 
+    if (['resolvido', 'cancelado'].includes(chamado.status)) {
+      return res.status(400).json({ erro: 'Não é possível alterar...' });
+    }
+
+
+
     const dadosAtualizar = { status };
     if (tecnico_id) dadosAtualizar.tecnico_id = tecnico_id;
 
     await chamadosModel.atualizarStatus(id, dadosAtualizar);
 
-    if (status === 'resolvido' && chamado.equipamento_id) {
-      await update('equipamentos', { status: 'operacional' }, `id = ${chamado.equipamento_id}`);
-    }
+
 
     res.status(200).json({
       sucesso: true,

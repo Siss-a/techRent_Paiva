@@ -20,18 +20,24 @@ const registro = async (req, res) => {
         erro: 'Campos obrigatórios: nome, email, senha'
       });
     }
+
+    //Tamanho mínimo de senha
+    if (senha.length < 6) {
+      return res.status(400).json({ sucesso: false, erro: 'A senha deve ter pelo menos 8 caracteres' });
+    }
+
+    //Tamanho mínimo do nome
+    if (nome.length < 2) {
+      return res.status(400).json({ sucesso: false, erro: 'O nome deve ter pelo menos 2 caracteres' });
+    }
+
+    const emailFormatado = email.trim();
+
     //Formato de e-mail (Regex simples)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ sucesso: false, erro: 'Formato de email inválido' });
     }
-
-    //Tamanho mínimo de senha
-    if (senha.length < 8) {
-      return res.status(400).json({ sucesso: false, erro: 'A senha deve ter pelo menos 8 caracteres' });
-    }
-
-    const emailFormatado = email.trim();
 
     const usuarios = await read('usuarios', `email = '${emailFormatado}'`);
     //tamanho de usuario
@@ -41,11 +47,6 @@ const registro = async (req, res) => {
         erro: 'Email já cadastrado'
       });
     }
-    //tamanho senha 
-    if (senha.length < 6) {
-      return res.status(400).json({ sucesso: false, erro: 'Senha muito curta' });
-    }
-
     const senhaHash = await hashPassword(senha);
 
     const usuarioId = await create('usuarios', {
