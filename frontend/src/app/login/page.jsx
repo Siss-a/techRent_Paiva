@@ -96,7 +96,7 @@ export default function LoginPage() {
 
         {/* Formulário */}
         <form onSubmit={handleSubmit}>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-4 p-6">
 
             {/* Alerta de erro — só aparece quando há mensagem */}
             {erro && (

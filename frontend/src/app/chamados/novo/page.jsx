@@ -1,13 +1,5 @@
 "use client";
 
-// =============================================
-// PÁGINA NOVO CHAMADO — /chamados/novo
-// =============================================
-// Busca equipamentos operacionais via GET /equipamentos
-// (filtrando status=operacional, equivalente à view_equipamentos_operacionais)
-// e exibe em um Select para o usuário escolher.
-// Pré-seleciona se vier query param ?equipamento_id=X
-
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -44,12 +36,10 @@ function NovoChamadoForm() {
   const equipamentoIdParam = searchParams.get("equipamento_id") || "";
   const nomeParam = searchParams.get("nome") || "";
 
-  // ── Lista de equipamentos operacionais ─────────────────
   const [equipamentos, setEquipamentos] = useState([]);
   const [carregandoEquip, setCarregandoEquip] = useState(true);
   const [erroEquip, setErroEquip] = useState("");
 
-  // ── Formulário ─────────────────────────────────────────
   const [form, setForm] = useState({
     equipamento_id: equipamentoIdParam,
     titulo: nomeParam ? `Problema com ${nomeParam}` : "",
@@ -61,7 +51,6 @@ function NovoChamadoForm() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
 
-  // ── Busca equipamentos operacionais ────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
@@ -74,14 +63,11 @@ function NovoChamadoForm() {
         });
         const dados = await res.json();
         if (dados.sucesso) {
-          // Filtra apenas os operacionais — espelha a view_equipamentos_operacionais
           const operacionais = dados.dados.filter(
             (e) => e.status === "operacional"
           );
           setEquipamentos(operacionais);
 
-          // Se veio por query param e ainda está operacional, mantém
-          // Se não veio param, pré-seleciona o primeiro disponível
           if (!equipamentoIdParam && operacionais.length > 0) {
             setForm((prev) => ({
               ...prev,
@@ -98,11 +84,9 @@ function NovoChamadoForm() {
         setCarregandoEquip(false);
       }
     }
-
     buscarEquipamentos();
-  }, []);
+  }, [router, equipamentoIdParam]);
 
-  // Atualiza o título sugerido ao mudar o equipamento no Select
   function handleEquipamentoChange(value) {
     const equip = equipamentos.find((e) => String(e.id) === value);
     setForm((prev) => ({
@@ -120,12 +104,10 @@ function NovoChamadoForm() {
   async function handleSubmit(e) {
     e.preventDefault();
     setErro("");
-
     if (!form.equipamento_id || !form.titulo.trim()) {
       setErro("Selecione um equipamento e informe o título.");
       return;
     }
-
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
 
@@ -144,14 +126,11 @@ function NovoChamadoForm() {
           prioridade: form.prioridade,
         }),
       });
-
       const dados = await resposta.json();
-
       if (!resposta.ok || !dados.sucesso) {
         setErro(dados.erro || "Erro ao criar chamado. Tente novamente.");
         return;
       }
-
       setSucesso(true);
       setTimeout(() => router.push("/chamados"), 2000);
     } catch {
@@ -164,12 +143,13 @@ function NovoChamadoForm() {
   if (sucesso) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <Card className="w-full max-w-md text-center shadow-md">
+        {/* Alterado para rounded-lg e cores neutras */}
+        <Card className="w-full max-w-md text-center shadow-sm border-slate-200 rounded-lg">
           <CardContent className="pt-8 pb-6 flex flex-col items-center gap-4">
-            <CheckCircle2 className="text-green-500" size={48} />
+            <CheckCircle2 className="text-slate-900" size={40} />
             <div>
-              <h2 className="text-xl font-semibold">Chamado criado!</h2>
-              <p className="text-muted-foreground text-sm mt-1">
+              <h2 className="text-lg font-bold text-slate-900">Chamado criado!</h2>
+              <p className="text-slate-500 text-sm mt-1">
                 Redirecionando para a lista de chamados…
               </p>
             </div>
@@ -179,7 +159,6 @@ function NovoChamadoForm() {
     );
   }
 
-  // Equipamento pré-selecionado (vindo do inventário)
   const equipamentoPreSelecionado =
     equipamentoIdParam
       ? equipamentos.find((e) => String(e.id) === equipamentoIdParam)
@@ -191,47 +170,46 @@ function NovoChamadoForm() {
 
         <Link
           href="/inventario"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground w-fit"
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 w-fit transition-colors"
         >
           <ArrowLeft size={16} />
           Voltar ao Inventário
         </Link>
 
-        <Card className="shadow-md">
+        {/* Alterado para rounded-lg e bordas mais suaves */}
+        <Card className="shadow-sm border-slate-200 rounded-lg">
           <CardHeader>
-            <CardTitle>Abrir Chamado</CardTitle>
-            <CardDescription>
-              Selecione o equipamento com problema e descreva a situação.
-              Apenas equipamentos <strong>operacionais</strong> estão disponíveis.
+            <CardTitle className="text-xl font-bold text-slate-900">Abrir Chamado</CardTitle>
+            <CardDescription className="text-slate-500">
+              Descreva o problema encontrado no equipamento operacional selecionado.
             </CardDescription>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-5">
 
               {erro && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="rounded-md">
                   <AlertDescription>{erro}</AlertDescription>
                 </Alert>
               )}
 
               {erroEquip && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="rounded-md">
                   <AlertDescription>{erroEquip}</AlertDescription>
                 </Alert>
               )}
 
-              {/* Select de equipamento — usa view_equipamentos_operacionais */}
+              {/* Select de equipamento */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="equipamento_id">Equipamento</Label>
+                <Label htmlFor="equipamento_id" className="text-slate-700 font-medium">Equipamento</Label>
 
                 {carregandoEquip ? (
-                  <Skeleton className="h-8 w-full rounded-lg" />
+                  <Skeleton className="h-10 w-full rounded-md" />
                 ) : equipamentos.length === 0 ? (
-                  <Alert>
-                    <Package size={16} />
-                    <AlertDescription>
-                      Nenhum equipamento operacional disponível no momento.
+                  <Alert className="bg-slate-100 border-slate-200 rounded-md">
+                    <AlertDescription className="text-slate-600">
+                      Nenhum equipamento operacional disponível.
                     </AlertDescription>
                   </Alert>
                 ) : (
@@ -240,46 +218,31 @@ function NovoChamadoForm() {
                     onValueChange={handleEquipamentoChange}
                     required
                   >
-                    <SelectTrigger id="equipamento_id" className="w-full">
+                    <SelectTrigger id="equipamento_id" className="w-full rounded-md border-slate-200">
                       <SelectValue placeholder="Selecione o equipamento…" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-md">
                       {equipamentos.map((e) => (
                         <SelectItem key={e.id} value={String(e.id)}>
-                          <span className="font-medium">#{e.id}</span>
+                          <span className="font-semibold text-slate-900">#{e.id}</span>
                           {" — "}
                           {e.nome}
-                          {e.categoria && (
-                            <span className="text-muted-foreground ml-1">
-                              ({e.categoria})
-                            </span>
-                          )}
-                          {e.patrimonio && (
-                            <span className="text-muted-foreground ml-1 font-mono text-xs">
-                              · {e.patrimonio}
-                            </span>
-                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
-
-                {equipamentoPreSelecionado && (
-                  <p className="text-xs text-muted-foreground">
-                    Pré-selecionado: <strong>{equipamentoPreSelecionado.nome}</strong>
-                  </p>
-                )}
               </div>
 
               {/* Título */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="titulo">Título</Label>
+                <Label htmlFor="titulo" className="text-slate-700 font-medium">Título do Problema</Label>
                 <Input
                   id="titulo"
                   name="titulo"
                   type="text"
-                  placeholder="Ex: Monitor não liga"
+                  placeholder="Ex: Teclado falhando"
+                  className="rounded-md border-slate-200"
                   required
                   value={form.titulo}
                   onChange={handleChange}
@@ -288,15 +251,15 @@ function NovoChamadoForm() {
 
               {/* Prioridade */}
               <div className="flex flex-col gap-1.5">
-                <Label>Prioridade</Label>
+                <Label className="text-slate-700 font-medium">Prioridade</Label>
                 <Select
                   value={form.prioridade}
                   onValueChange={(v) => setForm((prev) => ({ ...prev, prioridade: v }))}
                 >
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-40 rounded-md border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-md">
                     <SelectItem value="baixa">Baixa</SelectItem>
                     <SelectItem value="media">Média</SelectItem>
                     <SelectItem value="alta">Alta</SelectItem>
@@ -306,12 +269,12 @@ function NovoChamadoForm() {
 
               {/* Descrição */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="descricao">Descrição (opcional)</Label>
+                <Label htmlFor="descricao" className="text-slate-700 font-medium">Descrição</Label>
                 <Textarea
                   id="descricao"
                   name="descricao"
-                  placeholder="Detalhe o problema encontrado…"
-                  rows={4}
+                  placeholder="Descreva detalhadamente o ocorrido..."
+                  className="rounded-md border-slate-200 min-h-[100px]"
                   value={form.descricao}
                   onChange={handleChange}
                 />
@@ -319,10 +282,11 @@ function NovoChamadoForm() {
 
             </CardContent>
 
-            <CardFooter className="flex gap-2 justify-end">
+            <CardFooter className="flex gap-2 justify-end border-t border-slate-100 pt-6 mt-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                className="text-slate-500 hover:text-slate-900 rounded-md"
                 onClick={() => router.back()}
                 disabled={enviando}
               >
@@ -330,9 +294,10 @@ function NovoChamadoForm() {
               </Button>
               <Button
                 type="submit"
+                className="bg-slate-900 text-white hover:bg-slate-800 rounded-md px-6"
                 disabled={enviando || carregandoEquip || equipamentos.length === 0}
               >
-                {enviando ? "Enviando…" : "Abrir Chamado"}
+                {enviando ? "Processando..." : "Abrir Chamado"}
               </Button>
             </CardFooter>
           </form>

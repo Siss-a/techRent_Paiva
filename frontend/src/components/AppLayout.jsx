@@ -4,61 +4,54 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 
-// Icons inline SVG para evitar dependências extras
 const Icons = {
-  Menu: () => (
-    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-    </svg>
+  Menu: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[24px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      menu
+    </span>
   ),
-  X: () => (
-    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
+  X: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[24px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      close
+    </span>
   ),
-  Dashboard: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-    </svg>
+  Dashboard: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[20px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      grid_view
+    </span>
   ),
-  Ticket: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-    </svg>
+  Ticket: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[20px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      confirmation_number
+    </span>
   ),
-  Box: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
-    </svg>
+  Box: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[20px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      inventory_2
+    </span>
   ),
-  Wrench: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-    </svg>
+  Wrench: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[20px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      build
+    </span>
   ),
-  Panel: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
-    </svg>
+  Panel: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[20px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      admin_panel_settings
+    </span>
   ),
-  LogOut: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-    </svg>
+  LogOut: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[20px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      logout
+    </span>
   ),
-  User: () => (
-    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-    </svg>
-  ),
-  ChevronDown: () => (
-    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <polyline points="6 9 12 15 18 9"/>
-    </svg>
+  ChevronDown: ({ fill = false }) => (
+    <span className={`material-symbols-rounded text-[18px] transition-all ${fill ? "[font-variation-settings:'FILL'_1]" : ""}`}>
+      expand_more
+    </span>
   ),
 };
 
-// Definição de nav por nível de acesso
 const NAV_LINKS = {
   admin: [
     { href: "/dashboard", label: "Dashboard", icon: "Dashboard" },
@@ -80,15 +73,15 @@ const NAV_LINKS = {
 };
 
 const ROLE_LABELS = {
-  admin: "Administrador",
+  admin: "Admin",
   tecnico: "Técnico",
   cliente: "Cliente",
 };
 
 const ROLE_COLORS = {
-  admin: "bg-violet-100 text-violet-700",
-  tecnico: "bg-sky-100 text-sky-700",
-  cliente: "bg-emerald-100 text-emerald-700",
+  admin: "bg-slate-900 text-white border-slate-900",
+  tecnico: "bg-slate-100 text-slate-600 border-slate-200",
+  cliente: "bg-white text-slate-400 border-slate-200",
 };
 
 export default function AppLayout({ children }) {
@@ -101,12 +94,13 @@ export default function AppLayout({ children }) {
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (raw) {
-      try { setUsuario(JSON.parse(raw)); } catch {}
+      try { setUsuario(JSON.parse(raw)); } catch { }
     }
   }, []);
 
   useEffect(() => {
     setMenuOpen(false);
+    setUserDropdown(false);
   }, [pathname]);
 
   function handleLogout() {
@@ -118,77 +112,86 @@ export default function AppLayout({ children }) {
   const links = NAV_LINKS[nivel] || NAV_LINKS.cliente;
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-slate-900 selection:text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
+
+      {/* Importante: Adicione este link no seu layout.js principal ou aqui para carregar os ícones */}
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+      {/* Header Minimalista */}
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href={nivel === "tecnico" ? "/painel-tecnico" : nivel === "admin" ? "/dashboard" : "/chamados"}>
-              <div className="flex items-center gap-2 select-none">
-                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
-                  <span className="text-white font-black text-sm tracking-tighter">T</span>
+
+            {/* Esquerda: Logo e Nav Desktop */}
+            <div className="flex items-center gap-10">
+              <Link href={nivel === "tecnico" ? "/painel-tecnico" : nivel === "admin" ? "/dashboard" : "/chamados"}>
+                <div className="group flex items-center gap-1.5">
+                  {/* Um pequeno detalhe geométrico em vez do quadrado sólido */}
+                  <div className="w-2 h-5 bg-slate-900 rounded-full transition-all group-hover:h-6 group-hover:bg-slate-700" />
+
+                  <span className="font-black text-slate-900 text-xl tracking-tighter">
+                    tech<span className="text-slate-400 font-light">rent</span>
+                  </span>
                 </div>
-                <span className="font-bold text-slate-900 text-lg tracking-tight">tech<span className="text-slate-400 font-light">Rent</span></span>
-              </div>
-            </Link>
+              </Link>
 
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {links.map((link) => {
-                const IconComp = Icons[link.icon];
-                const active = pathname === link.href || pathname?.startsWith(link.href + "/");
-                return (
-                  <Link key={link.href} href={link.href}>
-                    <span className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      active
-                        ? "bg-slate-900 text-white shadow-sm"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                    }`}>
-                      {IconComp && <IconComp />}
-                      {link.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
+              <nav className="hidden lg:flex items-center gap-1">
+                {links.map((link) => {
+                  const IconComp = Icons[link.icon];
+                  const active = pathname === link.href || pathname?.startsWith(link.href + "/");
 
-            {/* Right: User + Mobile Menu */}
-            <div className="flex items-center gap-2">
-              {/* User Dropdown Desktop */}
+                  return (
+                    <Link key={link.href} href={link.href}>
+                      <span className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${active
+                          ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                        }`}>
+                        {IconComp && <IconComp fill={active} />}
+                        {link.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Direita: User Menu */}
+            <div className="flex items-center gap-3">
               {usuario && (
                 <div className="relative hidden md:block">
                   <button
                     onClick={() => setUserDropdown(!userDropdown)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    className={`flex items-center gap-3 pl-1.5 pr-3 py-1 rounded-2xl border transition-all duration-200 ${userDropdown ? "bg-white border-slate-300 shadow-sm" : "border-transparent hover:bg-slate-100"
+                      }`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center">
-                      <span className="text-slate-700 font-semibold text-xs uppercase">
-                        {usuario.nome?.[0] || "U"}
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 shadow-inner text-slate-600 font-bold text-[11px]">
+                      {usuario.nome?.[0] || "U"}
+                    </div>
+                    <div className="text-left hidden sm:block">
+                      <p className="text-[13px] font-bold text-slate-900 leading-none">{usuario.nome?.split(" ")[0]}</p>
+                      <span className={`text-[9px] font-bold uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded border inline-block ${ROLE_COLORS[nivel]}`}>
+                        {ROLE_LABELS[nivel]}
                       </span>
                     </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-slate-800 leading-none">{usuario.nome?.split(" ")[0]}</p>
-                    </div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ROLE_COLORS[nivel]}`}>
-                      {ROLE_LABELS[nivel]}
-                    </span>
                     <Icons.ChevronDown />
                   </button>
 
                   {userDropdown && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setUserDropdown(false)} />
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-20">
-                        <div className="px-4 py-2 border-b border-slate-100">
-                          <p className="text-xs text-slate-500">{usuario.email}</p>
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-20 animate-in fade-in zoom-in duration-150">
+                        <div className="px-4 py-3 border-b border-slate-50 mb-1">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Conta Ativa</p>
+                          <p className="text-sm font-medium text-slate-700 truncate">{usuario.email}</p>
                         </div>
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50/50 transition-all group"
                         >
-                          <Icons.LogOut />
-                          Sair da conta
+                          <div className="w-8 h-8 rounded-lg bg-slate-50 group-hover:bg-rose-100/50 flex items-center justify-center transition-colors">
+                            <Icons.LogOut />
+                          </div>
+                          Sair do sistema
                         </button>
                       </div>
                     </>
@@ -196,10 +199,10 @@ export default function AppLayout({ children }) {
                 </div>
               )}
 
-              {/* Mobile Menu Toggle */}
+              {/* Botão Mobile Toggle */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors"
+                className="lg:hidden p-2.5 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 transition-colors"
               >
                 {menuOpen ? <Icons.X /> : <Icons.Menu />}
               </button>
@@ -207,51 +210,53 @@ export default function AppLayout({ children }) {
           </div>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile Nav Dropdown */}
         {menuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white px-4 py-3 flex flex-col gap-1">
-            {links.map((link) => {
-              const IconComp = Icons[link.icon];
-              const active = pathname === link.href;
-              return (
-                <Link key={link.href} href={link.href}>
-                  <span className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
-                  }`}>
-                    {IconComp && <IconComp />}
-                    {link.label}
-                  </span>
-                </Link>
-              );
-            })}
-            <div className="mt-2 pt-2 border-t border-slate-200">
-              {usuario && (
-                <div className="flex items-center gap-3 px-3 py-2 mb-1">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                    <span className="text-slate-700 font-semibold text-xs uppercase">{usuario.nome?.[0]}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{usuario.nome}</p>
-                    <p className="text-xs text-slate-500">{ROLE_LABELS[nivel]}</p>
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <Icons.LogOut />
-                Sair da conta
-              </button>
+          <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
+            <div className="px-4 py-4 space-y-1 bg-slate-50/50">
+              {links.map((link) => {
+                const IconComp = Icons[link.icon];
+                const active = pathname === link.href;
+                return (
+                  <Link key={link.href} href={link.href}>
+                    <span className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${active ? "bg-slate-900 text-white shadow-md shadow-slate-300" : "text-slate-600 hover:bg-white border border-transparent hover:border-slate-200"
+                      }`}>
+                      {IconComp && <IconComp fill={active} />}
+                      {link.label}
+                    </span>
+                  </Link>
+                );
+              })}
+
+              <div className="mt-4 pt-4 border-t border-slate-200/60 px-2">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-sm font-bold text-slate-500 hover:text-rose-600 transition-colors"
+                >
+                  <Icons.LogOut />
+                  Encerrar Sessão
+                </button>
+              </div>
             </div>
           </div>
         )}
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {children}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="animate-in fade-in duration-500">
+          {children}
+        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-slate-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            techRent Asset Intelligence • {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
