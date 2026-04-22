@@ -36,7 +36,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 export default function RegistroPage() {
   const router = useRouter();
 
-  // ── Estado do formulário ──────────────────────────────
+  // Estado do formulário 
   const [form, setForm] = useState({
     nome:             "",
     email:            "",
