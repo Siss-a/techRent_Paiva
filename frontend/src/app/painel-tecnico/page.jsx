@@ -29,7 +29,6 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-// Estilos padronizados com o Dashboard principal
 const STATUS_STYLES = {
   aberto: "bg-slate-100 text-slate-700 border border-slate-300",
   em_atendimento: "bg-slate-200 text-slate-800 border border-slate-400",

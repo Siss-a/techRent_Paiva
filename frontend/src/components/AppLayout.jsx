@@ -72,16 +72,10 @@ const NAV_LINKS = {
   ],
 };
 
-const ROLE_LABELS = {
-  admin: "Admin",
-  tecnico: "Técnico",
-  cliente: "Cliente",
-};
-
 const ROLE_COLORS = {
-  admin: "bg-slate-900 text-white border-slate-900",
-  tecnico: "bg-slate-100 text-slate-600 border-slate-200",
-  cliente: "bg-white text-slate-400 border-slate-200",
+  admin: "bg-blue-600 text-white border-transparent",
+  tecnico: "bg-slate-800 text-white border-transparent",
+  cliente: "bg-white/50 text-slate-600 border-slate-200/50",
 };
 
 export default function AppLayout({ children }) {
@@ -112,25 +106,20 @@ export default function AppLayout({ children }) {
   const links = NAV_LINKS[nivel] || NAV_LINKS.cliente;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-slate-900 selection:text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
-
-      {/* Importante: Adicione este link no seu layout.js principal ou aqui para carregar os ícones */}
+    <div className="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
-      {/* Header Minimalista */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
+      {/* Header com Efeito Glassmorphism */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/30 bg-white/40 backdrop-blur-xl shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-
-            {/* Esquerda: Logo e Nav Desktop */}
+            
             <div className="flex items-center gap-10">
               <Link href={nivel === "tecnico" ? "/painel-tecnico" : nivel === "admin" ? "/dashboard" : "/chamados"}>
-                <div className="group flex items-center gap-1.5">
-                  {/* Um pequeno detalhe geométrico em vez do quadrado sólido */}
-                  <div className="w-2 h-5 bg-slate-900 rounded-full transition-all group-hover:h-6 group-hover:bg-slate-700" />
-
+                <div className="group flex items-center gap-2">
+                  <div className="w-2.5 h-6 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.3)]" />
                   <span className="font-black text-slate-900 text-xl tracking-tighter">
-                    tech<span className="text-slate-400 font-light">rent</span>
+                    Tech<span className="text-blue-600">Rent</span>
                   </span>
                 </div>
               </Link>
@@ -142,9 +131,9 @@ export default function AppLayout({ children }) {
 
                   return (
                     <Link key={link.href} href={link.href}>
-                      <span className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${active
-                          ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
-                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                      <span className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${active
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                          : "text-slate-600 hover:bg-white/50 hover:text-blue-600"
                         }`}>
                         {IconComp && <IconComp fill={active} />}
                         {link.label}
@@ -155,22 +144,20 @@ export default function AppLayout({ children }) {
               </nav>
             </div>
 
-            {/* Direita: User Menu */}
             <div className="flex items-center gap-3">
               {usuario && (
                 <div className="relative hidden md:block">
                   <button
                     onClick={() => setUserDropdown(!userDropdown)}
-                    className={`flex items-center gap-3 pl-1.5 pr-3 py-1 rounded-2xl border transition-all duration-200 ${userDropdown ? "bg-white border-slate-300 shadow-sm" : "border-transparent hover:bg-slate-100"
-                      }`}
+                    className={`flex items-center gap-3 pl-1.5 pr-3 py-1.5 rounded-2xl border transition-all duration-200 ${userDropdown ? "bg-white border-white shadow-md" : "border-transparent hover:bg-white/50"}`}
                   >
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 shadow-inner text-slate-600 font-bold text-[11px]">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-[11px] shadow-inner">
                       {usuario.nome?.[0] || "U"}
                     </div>
                     <div className="text-left hidden sm:block">
-                      <p className="text-[13px] font-bold text-slate-900 leading-none">{usuario.nome?.split(" ")[0]}</p>
-                      <span className={`text-[9px] font-bold uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded border inline-block ${ROLE_COLORS[nivel]}`}>
-                        {ROLE_LABELS[nivel]}
+                      <p className="text-[13px] font-black text-slate-900 leading-none">{usuario.nome?.split(" ")[0]}</p>
+                      <span className={`text-[9px] font-black uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded border inline-block ${ROLE_COLORS[nivel]}`}>
+                        {nivel}
                       </span>
                     </div>
                     <Icons.ChevronDown />
@@ -179,18 +166,16 @@ export default function AppLayout({ children }) {
                   {userDropdown && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setUserDropdown(false)} />
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-20 animate-in fade-in zoom-in duration-150">
-                        <div className="px-4 py-3 border-b border-slate-50 mb-1">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Conta Ativa</p>
-                          <p className="text-sm font-medium text-slate-700 truncate">{usuario.email}</p>
+                      <div className="absolute right-0 mt-3 w-60 bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white p-2 z-20 animate-in fade-in zoom-in duration-150">
+                        <div className="px-3 py-3 border-b border-slate-100 mb-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Conta Conectada</p>
+                          <p className="text-sm font-bold text-slate-700 truncate">{usuario.email}</p>
                         </div>
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50/50 transition-all group"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:text-white hover:bg-red-500 transition-all group"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-slate-50 group-hover:bg-rose-100/50 flex items-center justify-center transition-colors">
-                            <Icons.LogOut />
-                          </div>
+                          <Icons.LogOut />
                           Sair do sistema
                         </button>
                       </div>
@@ -199,10 +184,9 @@ export default function AppLayout({ children }) {
                 </div>
               )}
 
-              {/* Botão Mobile Toggle */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="lg:hidden p-2.5 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 transition-colors"
+                className="lg:hidden p-2.5 rounded-xl bg-white/50 text-slate-600 border border-white transition-colors"
               >
                 {menuOpen ? <Icons.X /> : <Icons.Menu />}
               </button>
@@ -212,26 +196,24 @@ export default function AppLayout({ children }) {
 
         {/* Mobile Nav Dropdown */}
         {menuOpen && (
-          <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
-            <div className="px-4 py-4 space-y-1 bg-slate-50/50">
+          <div className="lg:hidden absolute top-full left-0 w-full bg-white/90 backdrop-blur-2xl border-b border-white shadow-2xl overflow-hidden animate-in slide-in-from-top duration-200">
+            <div className="px-4 py-6 space-y-2">
               {links.map((link) => {
                 const IconComp = Icons[link.icon];
                 const active = pathname === link.href;
                 return (
                   <Link key={link.href} href={link.href}>
-                    <span className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${active ? "bg-slate-900 text-white shadow-md shadow-slate-300" : "text-slate-600 hover:bg-white border border-transparent hover:border-slate-200"
-                      }`}>
+                    <span className={`flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-black transition-all ${active ? "bg-blue-600 text-white shadow-lg" : "text-slate-600 hover:bg-white"}`}>
                       {IconComp && <IconComp fill={active} />}
                       {link.label}
                     </span>
                   </Link>
                 );
               })}
-
-              <div className="mt-4 pt-4 border-t border-slate-200/60 px-2">
+              <div className="mt-4 pt-4 border-t border-slate-200/50">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-sm font-bold text-slate-500 hover:text-rose-600 transition-colors"
+                  className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-black text-red-500 hover:bg-red-50 transition-colors"
                 >
                   <Icons.LogOut />
                   Encerrar Sessão
@@ -242,18 +224,18 @@ export default function AppLayout({ children }) {
         )}
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="animate-in fade-in duration-500">
+      {/* Main Content - Mantém o fundo dinâmico visível */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
           {children}
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-slate-100 bg-white">
+      {/* Footer Minimalista */}
+      <footer className="py-8 border-t border-white/20 bg-white/10 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-            techRent Asset Intelligence • {new Date().getFullYear()}
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+            TechRent Asset Intelligence • {new Date().getFullYear()}
           </p>
         </div>
       </footer>

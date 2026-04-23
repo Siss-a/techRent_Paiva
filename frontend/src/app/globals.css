@@ -54,8 +54,7 @@
 }
 
 :root {
-  /* Tons de Cinza/Slate para evitar o contraste puro 1 0 0 */
-  --background: oklch(0.99 0.002 240);
+  --background: oklch(94.9% 0.01347 286.029);
   --foreground: oklch(0.15 0.01 240);
 
   --card: oklch(1 0 0);
@@ -64,7 +63,6 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0.01 240);
 
-  /* Azul Noturno Elegante para o Primary */
   --primary: oklch(0.25 0.02 240);
   --primary-foreground: oklch(0.98 0.005 240);
 
@@ -139,8 +137,6 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-
-  /* Melhoria na Scrollbar para bater com o tema */
   ::-webkit-scrollbar {
     width: 10px;
   }
@@ -161,4 +157,16 @@
   justify-content: center;
   vertical-align: middle;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background: linear-gradient(-45deg, #f8fafc, #cedcee, #96b4e0, #68a1da);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
 }

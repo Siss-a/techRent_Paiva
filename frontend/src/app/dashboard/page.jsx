@@ -34,7 +34,6 @@ function formatarData(iso) {
   });
 }
 
-// Atualizado para usar Material Icons
 function MetricCard({ titulo, valor, descricao, iconName, carregando }) {
   return (
     <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">

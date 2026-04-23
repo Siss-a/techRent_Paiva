@@ -131,7 +131,7 @@ export default function DetalhesChamadoPage() {
         setNovoStatus(dadosChamado.dados.status);
       }
 
-      // Histórico de manutenção: filtra pelo chamado atual
+      // Histórico de manutenção
       if (resManutencao.ok) {
         const dadosManut = await resManutencao.json();
         if (dadosManut.sucesso) {
@@ -216,7 +216,7 @@ export default function DetalhesChamadoPage() {
   const podeTecnico = nivelAcesso === "tecnico" || nivelAcesso === "admin";
   const chamadoAtivo = chamado && ["aberto", "em_atendimento"].includes(chamado.status);
 
-  // ── Tela de Sucesso ────────────────────────────────────
+  // Tela de Sucesso 
   if (reparoConcluido) {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
